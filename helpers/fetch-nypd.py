@@ -110,7 +110,17 @@ def fetch_url(url, token=""):
             if len(raw) > MAX_BYTES: fail("response exceeds cap")
             return raw
     except Exception as e:
-        fail(f"fetch failed {url}: {e}")
+        print(f"fetch failed {url}: {e}", file=sys.stderr)
+        return None
+
+
+def load_cached(cache, mock):
+    try:
+        with open(cache, "rb") as f:
+            j = json.loads(f.read().decode("utf-8"))
+        if isinstance(j, list) and len(j) > 0: return j
+    except Exception: pass
+    return list(mock)
 
 def main():
     if len(sys.argv) < 3:
@@ -126,21 +136,23 @@ def main():
     # Add app token as query if needed? Socrata uses header, not query
     try:
         raw = fetch_url(url, token)
+        if raw is None: raise RuntimeError("no network")
         try:
             j = json.loads(raw.decode('utf-8'))
-            if not isinstance(j, list): fail("not list")
+            if not isinstance(j, list): raise RuntimeError("not list")
         except Exception as e:
-            fail(f"json parse failed: {e}")
+            raise RuntimeError(f"json parse failed: {e}")
         atomic_write(cache, raw)
         print(json.dumps(j, separators=(',',':')))
         return
     except SystemExit:
         raise
     except Exception as e:
-        print(f"fetch failed {e}, writing mock", file=sys.stderr)
+        print(f"fetch failed {e}, serving last-known cache", file=sys.stderr)
         mock = [{"cmplnt_num":"1","boro_nm":"Brooklyn","law_cat_cd":"FELONY"}]
-        atomic_write(cache, __import__('json').dumps(mock).encode())
-        print(json.dumps(mock, separators=(',',':')))
+        fallback = load_cached(cache, mock)
+        atomic_write(cache, json.dumps(fallback, separators=(',',':')).encode())
+        print(json.dumps(fallback, separators=(',',':')))
 
 if __name__ == "__main__":
     main()

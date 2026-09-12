@@ -89,6 +89,15 @@ def fetch(url):
         raw=resp.read(MAX_BYTES+1)
         if len(raw)>MAX_BYTES: fail("exceeds cap")
         return raw
+
+def load_cached(cache, mock):
+    try:
+        with open(cache, "rb") as f:
+            j = json.loads(f.read().decode("utf-8"))
+        if isinstance(j, list) and len(j) > 0: return j
+    except Exception: pass
+    return list(mock)
+
 def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
@@ -107,7 +116,7 @@ def main():
             print(f"fetch failed {u}: {e}", file=sys.stderr)
             continue
     if not merged:
-        merged=[]
+        merged = load_cached(cache, [])
     data=json.dumps(merged).encode()
     atomic_write(cache, data)
     print(json.dumps(merged, separators=(',',':')))

@@ -80,6 +80,15 @@ def atomic_write(path, data_bytes):
     finally:
         try: os.close(dir_fd)
         except: pass
+
+def load_cached(cache, mock):
+    try:
+        with open(cache, "rb") as f:
+            j = json.loads(f.read().decode("utf-8"))
+        if isinstance(j, list) and len(j) > 0: return j
+    except Exception: pass
+    return list(mock)
+
 def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
@@ -101,8 +110,9 @@ def main():
             return
     except Exception as e:
         print(f"fetch-citi failed {e}, writing mock", file=sys.stderr)
-    # Mock fallback for offline/demo
+    # Fallback for offline/demo: keep last-known cache, else mock
     mock=[{"station_id":"1","num_bikes_available":12,"num_docks_available":8,"is_installed":1,"is_renting":1},{"station_id":"2","num_bikes_available":5,"num_docks_available":15,"is_installed":1,"is_renting":1}]
-    atomic_write(cache, json.dumps(mock).encode())
-    print(json.dumps(mock, separators=(',',':')))
+    fallback = load_cached(cache, mock)
+    atomic_write(cache, json.dumps(fallback, separators=(',',':')).encode())
+    print(json.dumps(fallback, separators=(',',':')))
 if __name__=="__main__": main()

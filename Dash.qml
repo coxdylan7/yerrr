@@ -183,12 +183,12 @@ Item {
           spacing: 10
 
           // Back (detail only) or wavy logo (overview)
-          Item { Layout.preferredWidth: 84; Layout.preferredHeight: 30
+          Item { Layout.preferredWidth: root.dashMode === "detail" ? 132 : 84; Layout.preferredHeight: 30
             MouseArea { anchors.fill: parent; visible: root.dashMode === "overview"; onClicked: { if (effectiveService) effectiveService.toggleVoice() } }
             Comp.WavySprite { anchors.fill: parent; visible: root.dashMode === "overview"; capturing: root.capturing; text: "YERRR"; fontSize: 16; baseColor: root.capturing ? Color.urgent : "#00e5ff" }
-            Rectangle { anchors.fill: parent; visible: root.dashMode === "detail"; radius: 14; width: 78; height: 28
+            Rectangle { anchors.fill: parent; visible: root.dashMode === "detail"; radius: 14
               color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
-              Text { anchors.centerIn: parent; text: "← " + root.detailTitle(root.dashKey).slice(0, 16); color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11 }
+              Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; text: "← " + root.detailTitle(root.dashKey); color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.backOverview() }
             }
           }
@@ -501,9 +501,11 @@ Item {
         spacing: 8
 
         Text {
+          Layout.fillWidth: true
           text: root.detailTitle(root.dashKey)
           color: Color.foreground; font.family: Style.font.family; font.pixelSize: 15; font.bold: true
-          Layout.preferredWidth: implicitWidth
+          elide: Text.ElideRight
+          Layout.maximumWidth: 480
         }
         Rectangle {
           height: 20; width: subtxt.implicitWidth + 10; radius: 10
@@ -512,11 +514,11 @@ Item {
         }
         Item { Layout.fillWidth: true }
         Rectangle {
-          width: 150; height: 24; radius: 12
+          width: 120; height: 24; radius: 12
           color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.accent, 0.25)
           TextInput {
             id: searchInput
-            anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
+            anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 20
             verticalAlignment: TextInput.AlignVCenter
             text: root.detailQuery
             color: Color.foreground; font.family: Style.font.family; font.pixelSize: 10
@@ -524,7 +526,7 @@ Item {
             Keys.onEscapePressed: root.detailQuery = ""
           }
           Text {
-            anchors.left: parent.right; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
             visible: root.detailQuery !== ""
             text: "✕"; color: Util.alpha(Color.foreground, 0.5); font.pixelSize: 10
             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.detailQuery = "" }

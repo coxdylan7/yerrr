@@ -80,6 +80,15 @@ def atomic_write(path, data_bytes):
     finally:
         try: os.close(dir_fd)
         except: pass
+
+def load_cached(cache, mock):
+    try:
+        with open(cache, "rb") as f:
+            j = json.loads(f.read().decode("utf-8"))
+        if isinstance(j, list) and len(j) > 0: return j
+    except Exception: pass
+    return list(mock)
+
 def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
@@ -110,7 +119,7 @@ def main():
         except Exception as e:
             continue
     if not out:
-        out=[{"line":"1","status":"Good service"},{"line":"F","status":"Good service"},{"line":"L","status":"Good service"}]
+        out = load_cached(cache, [{"line":"1","status":"Good service"},{"line":"F","status":"Good service"},{"line":"L","status":"Good service"}])
     data=json.dumps(out).encode()
     atomic_write(cache, data)
     print(json.dumps(out, separators=(',',':')))
