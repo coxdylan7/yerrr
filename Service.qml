@@ -197,7 +197,7 @@ Item {
     // Secure descriptor-relative read (no symlink follow) via absolute python
     var cmd = ["/usr/bin/python3","-c",
       "import os,sys,stat\np=sys.argv[1]\ntry:\n d=os.path.dirname(p); b=os.path.basename(p)\n fd=os.open(d, os.O_DIRECTORY|os.O_NOFOLLOW)\n try:\n  fd2=os.open(b, os.O_RDONLY|os.O_NOFOLLOW, dir_fd=fd)\n  try:\n   data=os.read(fd2, 5242880)\n   sys.stdout.write(data.decode())\n  finally:\n   os.close(fd2)\n finally:\n  os.close(fd)\nexcept Exception:\n print('[]')\n",
-      "--", path]
+      path]
     proc.collected=""; proc.command=cmd; proc._setter=setter; proc.running=true
   }
   function handleCache(proc, setter, kind) {
