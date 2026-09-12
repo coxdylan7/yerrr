@@ -269,11 +269,14 @@ Item {
     console.log("yerrr: starting — cacheDir " + cacheDir)
     root.ensureCacheDir()
     root.fetchLocation()
-    // Stagger initial fetches to avoid burst
+    // Stagger initial fetches to avoid burst — all 8 datasets
     Qt.callLater(function(){ root.fetch311() })
     Qt.callLater(function(){ root.fetchSubway() })
+    Qt.callLater(function(){ root.fetchCiti() })
+    Qt.callLater(function(){ root.fetchNYPD() })
+    Qt.callLater(function(){ root.fetchAir() })
+    Qt.callLater(function(){ root.fetchDOB() })
+    Qt.callLater(function(){ root.fetchParking() })
     Qt.callLater(function(){ root.fetchLottery() })
-    // Load caches synchronously via helper procs (will populate after ensure dir)
-    // Timers will handle the rest
   }
 }
