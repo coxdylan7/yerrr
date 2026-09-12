@@ -12,9 +12,12 @@ Item {
   property var shell: null
   property var manifest: null
   property var service: null
-  readonly property bool ready: service !== null
-  readonly property bool dashVisible: ready ? !!service.dashVisible : false
-  readonly property bool capturing: ready ? !!service.capturing : false
+  readonly property var effectiveService: service ? service : (shell && typeof shell.serviceFor === "function" ? shell.serviceFor("djc.yerrr") : null)
+  readonly property bool ready: effectiveService !== null
+  readonly property bool dashVisible: ready ? !!effectiveService.dashVisible : false
+  readonly property bool capturing: ready ? !!effectiveService.capturing : false
+  onEffectiveServiceChanged: console.log("yerrr Dash: effectiveService " + (effectiveService ? "yes dashVisible=" + effectiveService.dashVisible : "null") + " shell=" + !!shell)
+  Component.onCompleted: console.log("yerrr Dash: completed shell=" + !!shell + " service=" + !!service + " effective=" + !!effectiveService)
 
   // Root overlay window
   PanelWindow {
@@ -31,7 +34,7 @@ Item {
     // Background dim + click to close
     MouseArea {
       anchors.fill: parent
-      onClicked: { if (service && service.toggleDash) service.toggleDash() }
+      onClicked: { if (effectiveService && effectiveService.toggleDash) effectiveService.toggleDash() }
     }
 
     // Main dash card
@@ -66,7 +69,7 @@ Item {
             text: "YERRR"
             fontSize: 16
             baseColor: root.capturing ? Color.urgent : "#00e5ff"
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) service.toggleVoice() } }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleVoice() } }
           }
 
           // Borough pills
@@ -78,18 +81,18 @@ Item {
               delegate: Rectangle {
                 required property string modelData
                 height: 28; width: pillTxt.implicitWidth + 16; radius: 14
-                color: (service && service.filters.borough === modelData) ? Util.alpha(Color.accent, 0.18) : Util.alpha(Color.foreground, 0.06)
+                color: (ready && effectiveService.filters.borough === modelData) ? Util.alpha(Color.accent, 0.18) : Util.alpha(Color.foreground, 0.06)
                 border.width: 1
-                border.color: (service && service.filters.borough === modelData) ? Util.alpha(Color.accent, 0.32) : Util.alpha(Color.foreground, 0.08)
-                Text { id: pillTxt; anchors.centerIn: parent; text: modelData=== "All" ? "All" : Y.boroughAbbr(modelData); font.family: Style.font.family; font.pixelSize: 11; font.bold: (service && service.filters.borough === modelData); color: (service && service.filters.borough === modelData) ? Color.accent : Color.foreground }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) { var f=service.filters; service.filters = { borough: modelData, zip: f.zip, hours: f.hours, kinds: f.kinds } } } }
+                border.color: (ready && effectiveService.filters.borough === modelData) ? Util.alpha(Color.accent, 0.32) : Util.alpha(Color.foreground, 0.08)
+                Text { id: pillTxt; anchors.centerIn: parent; text: modelData=== "All" ? "All" : Y.boroughAbbr(modelData); font.family: Style.font.family; font.pixelSize: 11; font.bold: (ready && effectiveService.filters.borough === modelData); color: (ready && effectiveService.filters.borough === modelData) ? Color.accent : Color.foreground }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) { var f=effectiveService.filters; effectiveService.filters = { borough: modelData, zip: f.zip, hours: f.hours, kinds: f.kinds } } } }
               }
             }
           }
 
           Text {
-            visible: ready && service.zip !== ""
-            text: ready ? "ZIP " + service.zip : ""
+            visible: ready && effectiveService.zip !== ""
+            text: ready ? "ZIP " + effectiveService.zip : ""
             color: Util.alpha(Color.foreground, 0.7)
             font.family: Style.font.family; font.pixelSize: 11
             Layout.preferredWidth: implicitWidth
@@ -104,7 +107,7 @@ Item {
               Text { text: root.capturing ? "●" : "○"; color: root.capturing ? Color.urgent : Color.foreground; font.pixelSize: 12; SequentialAnimation on opacity { running: root.capturing; loops: Animation.Infinite; NumberAnimation{to:0.5; duration:420; easing.type:Easing.InOutSine} NumberAnimation{to:1; duration:420; easing.type:Easing.InOutSine} } }
               Text { text: root.capturing ? "STOP" : "Voice"; color: root.capturing ? Color.urgent : Color.foreground; font.family: Style.font.family; font.pixelSize: 11; font.bold: root.capturing }
             }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) service.toggleVoice() } }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleVoice() } }
           }
 
           // Refresh
@@ -112,7 +115,7 @@ Item {
             width: 34; height: 28; radius: 14
             color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
             Text { anchors.centerIn: parent; text: ""; font.pixelSize: 12; color: Color.foreground }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) service.refreshAll() } }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.refreshAll() } }
           }
 
           // Close
@@ -120,7 +123,7 @@ Item {
             width: 32; height: 28; radius: 14
             color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
             Text { anchors.centerIn: parent; text: "✕"; font.pixelSize: 12; color: Color.foreground }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) service.toggleDash() } }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleDash() } }
           }
         }
 
@@ -130,7 +133,7 @@ Item {
           spacing: 8
           Text {
             Layout.fillWidth: true
-            text: ready ? service.crossSummary : "Loading NYC…"
+            text: ready ? effectiveService.crossSummary : "Loading NYC…"
             color: Util.alpha(Color.foreground, 0.72)
             font.family: Style.font.family; font.pixelSize: 12
             elide: Text.ElideRight
@@ -142,15 +145,15 @@ Item {
               delegate: Rectangle {
                 required property int modelData
                 height: 22; width: 44; radius: 11
-                color: (service && service.filters.hours === modelData) ? Util.alpha(Color.accent, 0.14) : Util.alpha(Color.foreground, 0.06)
-                border.width: 1; border.color: (service && service.filters.hours === modelData) ? Util.alpha(Color.accent, 0.28) : Util.alpha(Color.foreground, 0.08)
-                Text { anchors.centerIn: parent; text: modelData===24 ? "24h" : "7d"; font.family: Style.font.family; font.pixelSize: 10; color: (service && service.filters.hours === modelData) ? Color.accent : Color.foreground }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) { var f=service.filters; service.filters={ borough:f.borough, zip:f.zip, hours:modelData, kinds:f.kinds } } } }
+                color: (ready && effectiveService.filters.hours === modelData) ? Util.alpha(Color.accent, 0.14) : Util.alpha(Color.foreground, 0.06)
+                border.width: 1; border.color: (ready && effectiveService.filters.hours === modelData) ? Util.alpha(Color.accent, 0.28) : Util.alpha(Color.foreground, 0.08)
+                Text { anchors.centerIn: parent; text: modelData===24 ? "24h" : "7d"; font.family: Style.font.family; font.pixelSize: 10; color: (ready && effectiveService.filters.hours === modelData) ? Color.accent : Color.foreground }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) { var f=effectiveService.filters; effectiveService.filters={ borough:f.borough, zip:f.zip, hours:modelData, kinds:f.kinds } } } }
               }
             }
           }
           Text {
-            text: ready ? (service.locationSource!=="none" ? ("📍 " + (service.zip||service.borough||"loc") + " ±" + (isFinite(service.accuracy)? Math.round(service.accuracy)+"m" : "")) : "locating…") : ""
+            text: ready ? (effectiveService.locationSource!=="none" ? ("📍 " + (effectiveService.zip||effectiveService.borough||"loc") + " ±" + (isFinite(effectiveService.accuracy)? Math.round(effectiveService.accuracy)+"m" : "")) : "locating…") : ""
             color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10
           }
         }
@@ -175,7 +178,7 @@ Item {
               spacing: 8
               Text { anchors.horizontalCenter: parent.horizontalCenter; text: "🗽"; font.pixelSize: 36 }
               Text { anchors.horizontalCenter: parent.horizontalCenter; text: "NYC Map — OSM/tiles soon"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 11 }
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: ready ? (isFinite(service.effectiveLat()) ? service.effectiveLat().toFixed(4)+", "+service.effectiveLon().toFixed(4) : "no location") : ""; color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 10 }
+              Text { anchors.horizontalCenter: parent.horizontalCenter; text: ready ? (isFinite(effectiveService.effectiveLat()) ? effectiveService.effectiveLat().toFixed(4)+", "+effectiveService.effectiveLon().toFixed(4) : "no location") : ""; color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 10 }
               Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Cross-ref: 311 • subway • citi"; color: Util.alpha(Color.accent, 0.7); font.family: Style.font.family; font.pixelSize: 10 }
             }
           }
@@ -197,9 +200,9 @@ Item {
 
               // Helper to count filtered 311
               property var filtered311: ready ? (function(){
-                var a = Y.filterByTime(service.data311, service.filters.hours)
-                if (service.filters.borough!=="All") a = Y.filterByBorough(a, service.filters.borough)
-                if (service.filters.zip) a = Y.filterByZip(a, service.filters.zip)
+                var a = Y.filterByTime(effectiveService.data311, effectiveService.filters.hours)
+                if (effectiveService.filters.borough!=="All") a = Y.filterByBorough(a, effectiveService.filters.borough)
+                if (effectiveService.filters.zip) a = Y.filterByZip(a, effectiveService.filters.zip)
                 return a
               })() : []
 
@@ -212,9 +215,9 @@ Item {
                   Row { width: parent.width; spacing: 8
                     Text { text: "311"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 13; font.bold: true }
                     Rectangle { height: 18; width: txt311.implicitWidth+10; radius: 8; color: Util.alpha(Color.accent,0.12); border.width:1; border.color: Util.alpha(Color.accent,0.22)
-                      Text { id: txt311; anchors.centerIn: parent; text: ready ? String(cardsCol.filtered311.length) + " in " + service.filters.hours + "h" : "—"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10 }
+                      Text { id: txt311; anchors.centerIn: parent; text: ready ? String(cardsCol.filtered311.length) + " in " + effectiveService.filters.hours + "h" : "—"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10 }
                     }
-                    Text { text: ready && service.filters.borough!=="All" ? service.filters.borough : ""; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: ready && effectiveService.filters.borough!=="All" ? effectiveService.filters.borough : ""; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
                   }
                   Repeater {
                     model: ready ? Y.topComplaintTypes(cardsCol.filtered311, 3) : []
@@ -235,10 +238,10 @@ Item {
                 Column { id: colSub; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 12; spacing: 6
                   Row { width: parent.width; spacing: 8
                     Text { text: "MTA Subway"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 13; font.bold: true }
-                    Text { text: ready ? String(service.dataSubway.length) + " lines" : "—"; color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: ready ? String(effectiveService.dataSubway.length) + " lines" : "—"; color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
                   }
                   Repeater {
-                    model: ready ? service.dataSubway.slice(0,4) : []
+                    model: ready ? effectiveService.dataSubway.slice(0,4) : []
                     delegate: Row { required property var modelData; spacing: 8; width: colSub.width
                       Rectangle { width: 28; height: 18; radius: 4; color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Util.alpha(Color.urgent,0.18) : Util.alpha(Color.accent,0.12); border.width:1; border.color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Util.alpha(Color.urgent,0.28) : Util.alpha(Color.accent,0.22)
                         Text { anchors.centerIn: parent; text: String(modelData.subtype||"").slice(0,3); font.family: Style.font.family; font.pixelSize: 10; font.bold: true; color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Color.urgent : Color.accent }
@@ -246,7 +249,7 @@ Item {
                       Text { text: String(modelData.status||"Good service").slice(0,64); color: Util.alpha(Color.foreground,0.75); font.family: Style.font.family; font.pixelSize: 11; width: parent.width - 36; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
                     }
                   }
-                  Text { visible: ready && service.dataSubway.length===0; text: "No subway data yet — polling every 30s"; color: Util.alpha(Color.foreground,0.45); font.family: Style.font.family; font.pixelSize: 10 }
+                  Text { visible: ready && effectiveService.dataSubway.length===0; text: "No subway data yet — polling every 30s"; color: Util.alpha(Color.foreground,0.45); font.family: Style.font.family; font.pixelSize: 10 }
                 }
               }
 
@@ -259,12 +262,12 @@ Item {
 
                 Repeater {
                   model: ready ? [
-                    {k:"Citi Bike", v: service.dataCiti.length + " stations", c: service.dataCiti.slice(0,1)[0] ? (service.dataCiti[0].bikes + " bikes") : "—"},
-                    {k:"NYPD", v: service.dataNYPD.length + " complaints", c: (Y.topComplaintTypes(service.dataNYPD,1)[0] ? Y.topComplaintTypes(service.dataNYPD,1)[0].type : "—")},
-                    {k:"Air Quality", v: service.dataAir.length + " sites", c: service.dataAir[0] ? ("AQI " + String(service.dataAir[0].aqi||"")) : "—"},
-                    {k:"DOB Permits", v: service.dataDOB.length + " permits", c: service.dataDOB[0] ? String(service.dataDOB[0].subtype||"").slice(0,22) : "—"},
-                    {k:"Parking", v: service.dataParking.length + " violations", c: service.dataParking[0] ? String(service.dataParking[0].subtype||"").slice(0,22) : "—"},
-                    {k:"Lottery", v: service.dataLottery.length + " winners", c: service.dataLottery[0] ? (String(service.dataLottery[0].zip||"") + " " + String(service.dataLottery[0].amount||"").slice(0,12)) : "—"}
+                    {k:"Citi Bike", v: effectiveService.dataCiti.length + " stations", c: effectiveService.dataCiti.slice(0,1)[0] ? (effectiveService.dataCiti[0].bikes + " bikes") : "—"},
+                    {k:"NYPD", v: effectiveService.dataNYPD.length + " complaints", c: (Y.topComplaintTypes(effectiveService.dataNYPD,1)[0] ? Y.topComplaintTypes(effectiveService.dataNYPD,1)[0].type : "—")},
+                    {k:"Air Quality", v: effectiveService.dataAir.length + " sites", c: effectiveService.dataAir[0] ? ("AQI " + String(effectiveService.dataAir[0].aqi||"")) : "—"},
+                    {k:"DOB Permits", v: effectiveService.dataDOB.length + " permits", c: effectiveService.dataDOB[0] ? String(effectiveService.dataDOB[0].subtype||"").slice(0,22) : "—"},
+                    {k:"Parking", v: effectiveService.dataParking.length + " violations", c: effectiveService.dataParking[0] ? String(effectiveService.dataParking[0].subtype||"").slice(0,22) : "—"},
+                    {k:"Lottery", v: effectiveService.dataLottery.length + " winners", c: effectiveService.dataLottery[0] ? (String(effectiveService.dataLottery[0].zip||"") + " " + String(effectiveService.dataLottery[0].amount||"").slice(0,12)) : "—"}
                   ] : []
                   delegate: Rectangle {
                     required property var modelData
@@ -298,7 +301,7 @@ Item {
             spacing: 6
             Text {
               width: parent.width
-              text: ready ? String(service.terminalOutput).slice(0, 220) : "yerrr ready"
+              text: ready ? String(effectiveService.terminalOutput).slice(0, 220) : "yerrr ready"
               color: "#7af0ff"
               font.family: "monospace"
               font.pixelSize: 11
@@ -311,22 +314,22 @@ Item {
               TextInput {
                 id: termInput
                 Layout.fillWidth: true
-                text: ready ? service.terminalText : ""
+                text: ready ? effectiveService.terminalText : ""
                 color: "#e0faff"
                 font.family: "monospace"
                 font.pixelSize: 12
                 clip: true
                 focus: root.dashVisible
-                onTextChanged: { if (service) service.terminalText = text }
-                Keys.onReturnPressed: { if (service) service.handleTerminalSubmit(text); termInput.text = "" }
-                Keys.onEnterPressed: { if (service) service.handleTerminalSubmit(text); termInput.text = "" }
-                Keys.onEscapePressed: { if (service) service.toggleDash() }
+                onTextChanged: { if (effectiveService) effectiveService.terminalText = text }
+                Keys.onReturnPressed: { if (effectiveService) effectiveService.handleTerminalSubmit(text); termInput.text = "" }
+                Keys.onEnterPressed: { if (effectiveService) effectiveService.handleTerminalSubmit(text); termInput.text = "" }
+                Keys.onEscapePressed: { if (effectiveService) effectiveService.toggleDash() }
               }
               Rectangle {
                 width: 28; height: 22; radius: 6
                 color: Util.alpha("#00e5ff", 0.14); border.width: 1; border.color: Util.alpha("#00e5ff", 0.22)
                 Text { anchors.centerIn: parent; text: "↵"; color: "#00e5ff"; font.pixelSize: 10 }
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (service) service.handleTerminalSubmit(termInput.text); termInput.text = "" } }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.handleTerminalSubmit(termInput.text); termInput.text = "" } }
               }
             }
             Text {
