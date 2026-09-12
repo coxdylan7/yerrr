@@ -230,20 +230,77 @@ Item {
 
   // Processes — each helper writes cache atomically AND prints JSON to stdout; handleCache parses it
   Process { id: cacheProc }
-  Process { id: proc311; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){proc311.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(proc311, function(v){root.data311=v}, "311") } }
-  Process { id: procSubway; property string collected: ""; stdout: SplitParser{onRead: function(d){procSubway.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procSubway, function(v){root.dataSubway=v}, "subway") } }
-  Process { id: procCiti; property string collected: ""; stdout: SplitParser{onRead: function(d){procCiti.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procCiti, function(v){root.dataCiti=v}, "citi") } }
-  Process { id: procNYPD; property string collected: ""; stdout: SplitParser{onRead: function(d){procNYPD.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procNYPD, function(v){root.dataNYPD=v}, "nypd") } }
-  Process { id: procAir; property string collected: ""; stdout: SplitParser{onRead: function(d){procAir.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procAir, function(v){root.dataAir=v}, "air") } }
-  Process { id: procDOB; property string collected: ""; stdout: SplitParser{onRead: function(d){procDOB.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procDOB, function(v){root.dataDOB=v}, "dob") } }
-  Process { id: procParking; property string collected: ""; stdout: SplitParser{onRead: function(d){procParking.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procParking, function(v){root.dataParking=v}, "parking") } }
-  Process { id: procLottery; property string collected: ""; stdout: SplitParser{onRead: function(d){procLottery.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procLottery, function(v){root.dataLottery=v}, "lottery") } }
-  Process { id: locationProc; property string collected: ""; stdout: SplitParser{onRead: function(d){locationProc.collected+=d+"\n"}}; stderr: SplitParser{onRead: function(d){locationProc.collected+=d+"\n"}}; onExited: function(c,s){ root.handleLocation() } }
-  Process { id: startDaemonProc; onExited: function(c,s){ if(c!==0){root.voiceBusy=false; root.terminalOutput="Voxtype daemon failed"; return } voiceDelayTimer.restart() } }
-  Process { id: toggleProc; onExited: function(c,s){ root.voiceBusy=false; if(c!==0) root.terminalOutput="Voxtype not available" } }
+  Process {
+    id: proc311
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ proc311.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(proc311, function(v){ root.data311 = v }, "311") }
+  }
+  Process {
+    id: procSubway
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procSubway.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procSubway, function(v){ root.dataSubway = v }, "subway") }
+  }
+  Process {
+    id: procCiti
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procCiti.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procCiti, function(v){ root.dataCiti = v }, "citi") }
+  }
+  Process {
+    id: procNYPD
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procNYPD.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procNYPD, function(v){ root.dataNYPD = v }, "nypd") }
+  }
+  Process {
+    id: procAir
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procAir.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procAir, function(v){ root.dataAir = v }, "air") }
+  }
+  Process {
+    id: procDOB
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procDOB.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procDOB, function(v){ root.dataDOB = v }, "dob") }
+  }
+  Process {
+    id: procParking
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procParking.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procParking, function(v){ root.dataParking = v }, "parking") }
+  }
+  Process {
+    id: procLottery
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procLottery.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procLottery, function(v){ root.dataLottery = v }, "lottery") }
+  }
+  Process {
+    id: locationProc
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ locationProc.collected += data + "\n" } }
+    stderr: SplitParser { onRead: function(data){ locationProc.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleLocation() }
+  }
+  Process {
+    id: startDaemonProc
+    onExited: function(code, status){ if(code!==0){ root.voiceBusy=false; root.terminalOutput="Voxtype daemon failed"; return } voiceDelayTimer.restart() }
+  }
+  Process {
+    id: toggleProc
+    onExited: function(code, status){ root.voiceBusy=false; if(code!==0) root.terminalOutput="Voxtype not available" }
+  }
   Process { id: notifyProc }
   FileView { id: voxtypeStateView; path: root.voxtypeStateFile; watchChanges: true; printErrors: false; onFileChanged: root.refreshVoxtypeState() }
-  Process { id: voxtypeCheck; command: ["/usr/bin/sh","-c","PATH=/usr/bin:/bin; test -x /usr/bin/voxtype && echo yes || echo no"]; running: true; stdout: SplitParser{onRead: function(d){ if(String(d).trim()==="yes") root.voxtypeInstalled=true }} }
+  Process {
+    id: voxtypeCheck
+    command: ["/usr/bin/sh","-c","PATH=/usr/bin:/bin; test -x /usr/bin/voxtype && echo yes || echo no"]
+    running: true
+    stdout: SplitParser { onRead: function(data){ if(String(data).trim()==="yes") root.voxtypeInstalled=true } }
+  }
 
   Timer { id: voiceDelayTimer; interval: 600; onTriggered: { toggleProc.command=["/usr/bin/voxtype","record","toggle"]; toggleProc.running=true } }
 
