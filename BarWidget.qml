@@ -56,8 +56,7 @@ BarWidget {
     onClicked: {
       if (service && service.toggleDash) service.toggleDash()
       else console.log("yerrr: no service for toggleDash")
-      // also toggle hover popup for click fallback
-      root.hoverOpen = !root.hoverOpen
+      root.hoverOpen = false
     }
     onEntered: {
       root.hoverOpen = true
@@ -75,7 +74,7 @@ BarWidget {
     anchorItem: root
     owner: root
     bar: root.bar
-    open: root.hoverOpen || (ready && !!service.dashVisible)
+    open: root.hoverOpen && !(ready && !!service.dashVisible)
     triggerMode: "hover"
     contentWidth: Math.min(840, Math.max(560, Style.space(760)))
     contentHeight: Math.min(680, Style.space(640))
@@ -108,11 +107,11 @@ BarWidget {
         rowSpacing: 8
         Repeater {
           model: ready ? [
-            {k:"311", v: service.data311.length + " • " + (service.data311[0] ? String(service.data311[0].subtype||"").slice(0,22) : "—")},
-            {k:"Subway", v: service.dataSubway.length + " lines • " + (service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,22) : "—")},
-            {k:"Citi", v: service.dataCiti.length + " stations"},
-            {k:"Dispensaries", v: service.dataDisp.length + " NY retail"},
-            {k:"Lottery", v: service.dataLottery.length + " winners"}
+            {k:"311", key:"311", v: service.data311.length + " • " + (service.data311[0] ? String(service.data311[0].subtype||"").slice(0,22) : "—")},
+            {k:"Subway", key:"subway", v: service.dataSubway.length + " lines • " + (service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,22) : "—")},
+            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations"},
+            {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " NY retail"},
+            {k:"Lottery", key:"lottery", v: service.dataLottery.length + " winners"}
           ] : []
           delegate: Rectangle {
             required property var modelData
@@ -122,10 +121,21 @@ BarWidget {
               Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.k; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
               Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.v; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter }
             }
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              hoverEnabled: true
+              onEntered: parent.border.color = Util.alpha(Color.accent,0.55)
+              onExited: parent.border.color = Util.alpha(Color.foreground,0.07)
+              onClicked: {
+                if (modelData.key && root.service) root.service.dashRequest = modelData.key
+                if (root.service && !root.service.dashVisible && root.service.toggleDash) root.service.toggleDash()
+              }
+            }
           }
         }
       }
-      Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Hover keeps open — click YERRR for full Jarvis overlay (terminal ❯)"; color: Util.alpha(Color.foreground,0.38); font.family: Style.font.family; font.pixelSize: 9 }
+      Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Hover to peek — click a card (or YERRR) to open it in the full dash"; color: Util.alpha(Color.foreground,0.38); font.family: Style.font.family; font.pixelSize: 9 }
     }
   }
 }

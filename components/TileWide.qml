@@ -5,7 +5,7 @@ Rectangle {
   property string title: ""
   property string count: ""
   property string subtitle: ""
-  property var onClicked: null
+  signal clicked()
   implicitHeight: 56
   radius: 12
   color: Qt.rgba(0.05, 0.06, 0.09, 0.9)
@@ -31,5 +31,12 @@ Rectangle {
       Text { text: root.subtitle; color: Qt.rgba(1, 1, 1, 0.5); font.family: "Sans Serif"; font.pixelSize: 9; elide: Text.ElideRight; width: parent.width }
     }
   }
-  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.onClicked }
+  MouseArea {
+    anchors.fill: parent
+    cursorShape: Qt.PointingHandCursor
+    hoverEnabled: true
+    onEntered: root.border.color = Qt.rgba(0, 0.9, 1, 0.55)
+    onExited: root.border.color = Qt.rgba(1, 1, 1, 0.09)
+    onClicked: { root.clicked() }
+  }
 }

@@ -99,6 +99,7 @@ Item {
 
   // Dash / voice / terminal
   property bool dashVisible: false
+  property string dashRequest: ""
   property string terminalText: ""
   property string terminalOutput: "yerrr ready — type \"bk 311\" or \"yerrr show subway\" — location: locating..."
   property var filters: ({ borough: "All", zip: "", hours: 24, kinds: [] })

@@ -18,6 +18,7 @@ Item {
   property string dashMode: "overview"   // "overview" | "detail"
   property string dashKey: ""            // dataset key for detail mode
   property string detailQuery: ""        // search box in detail
+  property string pendingKey: ""         // dataset requested via service.dashRequest while window closed
 
   readonly property bool dashVisible: ready ? !!effectiveService.dashVisible : false
   readonly property bool capturing: ready ? !!effectiveService.capturing : false
@@ -98,14 +99,44 @@ Item {
       }
       rows.sort(function(a, b){ return a.badge.indexOf("mi") !== -1 && b.badge.indexOf("mi") !== -1 ? parseFloat(a.badge) - parseFloat(b.badge) : 0 })
     }
+    if (root.detailQuery !== "") {
+      var q = String(root.detailQuery).trim().toLowerCase()
+      var out = []
+      for (i = 0; i < rows.length; i++) {
+        var rq = rows[i]
+        if (String(rq.primary + " " + rq.secondary + " " + rq.meta + " " + rq.badge).toLowerCase().indexOf(q) !== -1) out.push(rq)
+      }
+      rows = out
+    }
     return rows
   }
   function detailTitle(key) {
     var m = { "311": "City 311 Complaints", "subway": "MTA Subway Status", "citi": "Citi Bike Availability", "nypd": "NYPD Complaints", "air": "Air Quality", "dob": "DOB Permits", "parking": "Parking Violations", "lottery": "Lottery Winners", "disp": "Cannabis Dispensaries" }
     return m[key] || key
   }
-  function openDetail(key) { root.dashKey = key; root.dashMode = "detail"; root.detailQuery = "" }
-  function backOverview() { root.dashMode = "overview"; root.dashKey = "" }
+  function openDetail(key) { root.dashKey = key; root.dashMode = "detail"; root.detailQuery = ""; console.log("yerrr Dash: openDetail key=" + key) }
+  function backOverview() { root.dashMode = "overview"; root.dashKey = ""; console.log("yerrr Dash: backOverview") }
+
+  Connections {
+    target: root.ready ? root.effectiveService : null
+    function onDashRequestChanged() {
+      if (!root.effectiveService || !root.effectiveService.dashRequest) return
+      var k = root.effectiveService.dashRequest
+      root.effectiveService.dashRequest = ""
+      console.log("yerrr Dash: request key=" + k)
+      if (root.dashVisible) root.openDetail(k)
+      else root.pendingKey = k
+    }
+  }
+
+  onDashVisibleChanged: {
+    if (root.effectiveService && root.effectiveService.dashVisible) {
+      root.dashMode = "overview"
+      root.dashKey = ""
+      root.detailQuery = ""
+      if (root.pendingKey !== "") { root.openDetail(root.pendingKey); root.pendingKey = "" }
+    }
+  }
 
   Component.onCompleted: console.log("yerrr Dash: completed shell=" + !!shell + " service=" + !!service + " effective=" + !!effectiveService)
 
@@ -481,9 +512,23 @@ Item {
         }
         Item { Layout.fillWidth: true }
         Rectangle {
-          width: 130; height: 24; radius: 12
-          color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
-          Text { anchors.centerIn: parent; text: "🔍 type filters in ❯"; color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10 }
+          width: 150; height: 24; radius: 12
+          color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.accent, 0.25)
+          TextInput {
+            id: searchInput
+            anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
+            verticalAlignment: TextInput.AlignVCenter
+            text: root.detailQuery
+            color: Color.foreground; font.family: Style.font.family; font.pixelSize: 10
+            onTextChanged: root.detailQuery = text
+            Keys.onEscapePressed: root.detailQuery = ""
+          }
+          Text {
+            anchors.left: parent.right; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter
+            visible: root.detailQuery !== ""
+            text: "✕"; color: Util.alpha(Color.foreground, 0.5); font.pixelSize: 10
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.detailQuery = "" }
+          }
         }
       }
 
@@ -518,7 +563,16 @@ Item {
       }
       Text {
         Layout.fillWidth: true
-        text: root.detailQuery !== "" ? "Search filters not yet wired — use header pills / terminal" : "Use —  head banner: tap “❯” below and type e.g. \"queens subway\", \"11249 disp\""
+        Layout.fillHeight: true
+        visible: root.detailRows(root.dashKey).length === 0
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignHCenter
+        text: root.ready ? (root.detailQuery !== "" ? "No matches for “" + root.detailQuery + "” in " + root.detailTitle(root.dashKey) : root.detailTitle(root.dashKey) + " is still loading — refresh (⭮) or wait for the next update cycle") : "Connectivity loading…"
+        color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 11
+      }
+      Text {
+        Layout.fillWidth: true
+        text: root.detailQuery !== "" ? "\"" + root.detailQuery + "\" — clear with ✕ or Esc. Full filters: header pills + “❯” terminal e.g. \"queens subway\", \"11249 disp\"" : "Search filters in the box in real time — or use “❯” terminal e.g. \"queens subway\", \"11249 disp\""
         color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 9
       }
     }
