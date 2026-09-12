@@ -110,5 +110,5 @@ def main():
         merged=[]
     data=json.dumps(merged).encode()
     atomic_write(cache, data)
-    print(f"wrote {cache} {len(merged)}")
+    print(json.dumps(merged, separators=(',',':')))
 if __name__=="__main__": main()

@@ -113,5 +113,5 @@ def main():
         out=[{"line":"1","status":"Good service"},{"line":"F","status":"Good service"},{"line":"L","status":"Good service"}]
     data=json.dumps(out).encode()
     atomic_write(cache, data)
-    print(f"wrote {cache} {len(out)}")
+    print(json.dumps(out, separators=(',',':')))
 if __name__=="__main__": main()

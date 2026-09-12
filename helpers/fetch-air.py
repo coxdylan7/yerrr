@@ -132,7 +132,7 @@ def main():
         except Exception as e:
             fail(f"json parse failed: {e}")
         atomic_write(cache, raw)
-        print(f"wrote {cache} {len(j)} records")
+        print(json.dumps(j, separators=(',',':')))
         return
     except SystemExit:
         raise
@@ -140,7 +140,7 @@ def main():
         print(f"fetch failed {e}, writing mock", file=sys.stderr)
         mock = [{"site_id":"1","borough":"Brooklyn","aqi":42}]
         atomic_write(cache, __import__('json').dumps(mock).encode())
-        print(f"wrote {cache} {len(mock)} mock")
+        print(json.dumps(mock, separators=(',',':')))
 
 if __name__ == "__main__":
     main()

@@ -97,12 +97,12 @@ def main():
                 out.append({"station_id":s.get("station_id"),"num_bikes_available":s.get("num_bikes_available"),"num_docks_available":s.get("num_docks_available"),"is_installed":s.get("is_installed"),"is_renting":s.get("is_renting")})
             data=json.dumps(out).encode()
             atomic_write(cache, data)
-            print(f"wrote {cache} {len(out)}")
+            print(json.dumps(out, separators=(',',':')))
             return
     except Exception as e:
         print(f"fetch-citi failed {e}, writing mock", file=sys.stderr)
     # Mock fallback for offline/demo
     mock=[{"station_id":"1","num_bikes_available":12,"num_docks_available":8,"is_installed":1,"is_renting":1},{"station_id":"2","num_bikes_available":5,"num_docks_available":15,"is_installed":1,"is_renting":1}]
     atomic_write(cache, json.dumps(mock).encode())
-    print(f"wrote {cache} {len(mock)} mock")
+    print(json.dumps(mock, separators=(',',':')))
 if __name__=="__main__": main()
