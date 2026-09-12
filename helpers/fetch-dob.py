@@ -110,7 +110,7 @@ def fetch_url(url, token=""):
             if len(raw) > MAX_BYTES: fail("response exceeds cap")
             return raw
     except Exception as e:
-        fail(f"fetch failed {url}: {e}")
+        raise e
 
 def main():
     if len(sys.argv) < 3:
