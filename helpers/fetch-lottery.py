@@ -93,7 +93,7 @@ def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
     validate_cache_path(cache)
-    urls=["https://data.ny.gov/resource/d6yy-54nr.json?$limit=20&$order=draw_date DESC","https://data.ny.gov/resource/5xaw-6ayf.json?$limit=20&$order=draw_date DESC"]
+    urls=["https://data.ny.gov/resource/d6yy-54nr.json?$limit=20&$order=draw_date%20DESC","https://data.ny.gov/resource/5xaw-6ayf.json?$limit=20&$order=draw_date%20DESC"]
     merged=[]
     for u in urls:
         try:
