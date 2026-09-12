@@ -235,16 +235,25 @@ Item {
     if (s.length>0) root.voxtypeState = s
   }
 
-  // Processes
+  // Processes — fetch procs write cache atomically, then trigger cache-read procs to populate UI
   Process { id: cacheProc }
-  Process { id: proc311; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){proc311.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(proc311, function(v){root.data311=v}, "311") } }
-  Process { id: procSubway; property string collected: ""; stdout: SplitParser{onRead: function(d){procSubway.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procSubway, function(v){root.dataSubway=v}, "subway") } }
-  Process { id: procCiti; property string collected: ""; stdout: SplitParser{onRead: function(d){procCiti.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procCiti, function(v){root.dataCiti=v}, "citi") } }
-  Process { id: procNYPD; property string collected: ""; stdout: SplitParser{onRead: function(d){procNYPD.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procNYPD, function(v){root.dataNYPD=v}, "nypd") } }
-  Process { id: procAir; property string collected: ""; stdout: SplitParser{onRead: function(d){procAir.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procAir, function(v){root.dataAir=v}, "air") } }
-  Process { id: procDOB; property string collected: ""; stdout: SplitParser{onRead: function(d){procDOB.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procDOB, function(v){root.dataDOB=v}, "dob") } }
-  Process { id: procParking; property string collected: ""; stdout: SplitParser{onRead: function(d){procParking.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procParking, function(v){root.dataParking=v}, "parking") } }
-  Process { id: procLottery; property string collected: ""; stdout: SplitParser{onRead: function(d){procLottery.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(procLottery, function(v){root.dataLottery=v}, "lottery") } }
+  Process { id: proc311; property string collected: ""; stdout: SplitParser{onRead: function(d){proc311.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetch311 done code "+c); root.loadCache(cacheRead311, cache311, function(v){root.data311=v}) } }
+  Process { id: procSubway; property string collected: ""; stdout: SplitParser{onRead: function(d){procSubway.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchSubway done "+c); root.loadCache(cacheReadSubway, cacheSubway, function(v){root.dataSubway=v}) } }
+  Process { id: procCiti; property string collected: ""; stdout: SplitParser{onRead: function(d){procCiti.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchCiti done "+c); root.loadCache(cacheReadCiti, cacheCiti, function(v){root.dataCiti=v}) } }
+  Process { id: procNYPD; property string collected: ""; stdout: SplitParser{onRead: function(d){procNYPD.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchNYPD done "+c); root.loadCache(cacheReadNYPD, cacheNYPD, function(v){root.dataNYPD=v}) } }
+  Process { id: procAir; property string collected: ""; stdout: SplitParser{onRead: function(d){procAir.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchAir done "+c); root.loadCache(cacheReadAir, cacheAir, function(v){root.dataAir=v}) } }
+  Process { id: procDOB; property string collected: ""; stdout: SplitParser{onRead: function(d){procDOB.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchDOB done "+c); root.loadCache(cacheReadDOB, cacheDOB, function(v){root.dataDOB=v}) } }
+  Process { id: procParking; property string collected: ""; stdout: SplitParser{onRead: function(d){procParking.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchParking done "+c); root.loadCache(cacheReadParking, cacheParking, function(v){root.dataParking=v}) } }
+  Process { id: procLottery; property string collected: ""; stdout: SplitParser{onRead: function(d){procLottery.collected+=d+"\n"}}; onExited: function(c,s){ console.log("yerrr: fetchLottery done "+c); root.loadCache(cacheReadLottery, cacheLottery, function(v){root.dataLottery=v}) } }
+  // Dedicated cache-read procs (descriptor-relative nofollow)
+  Process { id: cacheRead311; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheRead311.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheRead311, cacheRead311._setter, "311") } }
+  Process { id: cacheReadSubway; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadSubway.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadSubway, cacheReadSubway._setter, "subway") } }
+  Process { id: cacheReadCiti; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadCiti.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadCiti, cacheReadCiti._setter, "citi") } }
+  Process { id: cacheReadNYPD; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadNYPD.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadNYPD, cacheReadNYPD._setter, "nypd") } }
+  Process { id: cacheReadAir; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadAir.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadAir, cacheReadAir._setter, "air") } }
+  Process { id: cacheReadDOB; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadDOB.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadDOB, cacheReadDOB._setter, "dob") } }
+  Process { id: cacheReadParking; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadParking.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadParking, cacheReadParking._setter, "parking") } }
+  Process { id: cacheReadLottery; property string collected: ""; property var _setter: null; stdout: SplitParser{onRead: function(d){cacheReadLottery.collected+=d+"\n"}}; onExited: function(c,s){ root.handleCache(cacheReadLottery, cacheReadLottery._setter, "lottery") } }
   Process { id: locationProc; property string collected: ""; stdout: SplitParser{onRead: function(d){locationProc.collected+=d+"\n"}}; stderr: SplitParser{onRead: function(d){locationProc.collected+=d+"\n"}}; onExited: function(c,s){ root.handleLocation() } }
   Process { id: startDaemonProc; onExited: function(c,s){ if(c!==0){root.voiceBusy=false; root.terminalOutput="Voxtype daemon failed"; return } voiceDelayTimer.restart() } }
   Process { id: toggleProc; onExited: function(c,s){ root.voiceBusy=false; if(c!==0) root.terminalOutput="Voxtype not available" } }
@@ -269,7 +278,16 @@ Item {
     console.log("yerrr: starting — cacheDir " + cacheDir)
     root.ensureCacheDir()
     root.fetchLocation()
-    // Stagger initial fetches to avoid burst — all 8 datasets
+    // Immediately load existing caches so dash isn't empty while fetches run
+    Qt.callLater(function(){ root.loadCache(cacheRead311, cache311, function(v){root.data311=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadSubway, cacheSubway, function(v){root.dataSubway=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadCiti, cacheCiti, function(v){root.dataCiti=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadNYPD, cacheNYPD, function(v){root.dataNYPD=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadAir, cacheAir, function(v){root.dataAir=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadDOB, cacheDOB, function(v){root.dataDOB=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadParking, cacheParking, function(v){root.dataParking=v}) })
+    Qt.callLater(function(){ root.loadCache(cacheReadLottery, cacheLottery, function(v){root.dataLottery=v}) })
+    // Then stagger fetches to refresh
     Qt.callLater(function(){ root.fetch311() })
     Qt.callLater(function(){ root.fetchSubway() })
     Qt.callLater(function(){ root.fetchCiti() })
