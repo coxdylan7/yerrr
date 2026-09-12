@@ -188,9 +188,9 @@ Item {
   function fetchSubway() { procSubway.collected=""; procSubway.command=["/usr/bin/python3", helperSubway, cacheSubway]; procSubway.running=true }
   function fetchCiti()   { procCiti.collected=""; procCiti.command=["/usr/bin/python3", helperCiti, cacheCiti]; procCiti.running=true }
   function fetchNYPD()   { procNYPD.collected=""; procNYPD.command=["/usr/bin/python3", helperNYPD, cacheNYPD, String(maxNYPD), appToken]; procNYPD.running=true }
-  function fetchAir()    { procAir.collected=""; procAir.command=["/usr/bin/python3", helperAir, cacheAir, appToken]; procAir.running=true }
-  function fetchDOB()    { procDOB.collected=""; procDOB.command=["/usr/bin/python3", helperDOB, cacheDOB, appToken]; procDOB.running=true }
-  function fetchParking(){ procParking.collected=""; procParking.command=["/usr/bin/python3", helperParking, cacheParking, appToken]; procParking.running=true }
+  function fetchAir()    { procAir.collected=""; procAir.command=["/usr/bin/python3", helperAir, cacheAir, "100", appToken]; procAir.running=true }
+  function fetchDOB()    { procDOB.collected=""; procDOB.command=["/usr/bin/python3", helperDOB, cacheDOB, "100", appToken]; procDOB.running=true }
+  function fetchParking(){ procParking.collected=""; procParking.command=["/usr/bin/python3", helperParking, cacheParking, "100", appToken]; procParking.running=true }
   function fetchLottery(){ procLottery.collected=""; procLottery.command=["/usr/bin/python3", helperLottery, cacheLottery]; procLottery.running=true }
 
   function handleCache(proc, setter, kind) {
