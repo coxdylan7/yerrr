@@ -252,11 +252,61 @@ function terminalParse(input) {
   if (s.indexOf("all")!==-1) out.kinds = kinds.slice()
   return out
 }
+function normalizeDispensaries(raw) {
+  var out = []
+  for (var i=0;i<raw.length;i++) {
+    var r = raw[i]
+    out.push({
+      dba: String(r.dba || r.entity_name || r.dbA || "").trim(),
+      license: String(r.license_number || "").trim(),
+      licenseCode: String(r.license_type_code || "").trim(),
+      status: String(r.status || r.license_status || "").trim(),
+      city: String(r.city || "").trim(),
+      state: String(r.state || r.State || "").trim(),
+      zip: String(r.zip || r.zip_code || "").trim(),
+      address: String(r.address || r.address_line_1 || "").trim(),
+      lat: isFinite(Number(r.lat)) ? Number(r.lat) : NaN,
+      lon: isFinite(Number(r.lon)) ? Number(r.lon) : NaN
+    })
+  }
+  return out
+}
+function nearestDispensaries(recs, lat, lon, n) {
+  var out = []
+  for (var i=0;i<recs.length;i++) {
+    var r = recs[i]
+    if (!isFinite(r.lat) || !isFinite(r.lon)) continue
+    var miles = haversineMiles(lat, lon, r.lat, r.lon)
+    out.push({rec: r, miles: miles})
+  }
+  out.sort(function(a,b){ return a.miles - b.miles })
+  var res = []
+  for (var k=0;k<out.length && k<(n||3);k++) res.push(out[k])
+  return res
+}
+function tileXY(lat, lon, zoom) {
+  var n = Math.pow(2, zoom)
+  var x = (lon + 180) / 360 * n
+  var latrad = lat * Math.PI / 180
+  var y = (1 - Math.log(Math.tan(latrad) + 1/Math.cos(latrad)) / Math.PI) / 2 * n
+  return { tx: Math.floor(x), ty: Math.floor(y), fx: (x - Math.floor(x)), fy: (y - Math.floor(y)) }
+}
+function timeAgo(iso) {
+  if (!iso) return ""
+  var t = (new Date(iso)).getTime()
+  if (!isFinite(t)) return ""
+  var d = Math.floor((Date.now() - t) / 1000)
+  if (d < 60) return d + "s"
+  if (d < 3600) return Math.floor(d/60) + "m"
+  if (d < 86400) return Math.floor(d/3600) + "h"
+  return Math.floor(d/86400) + "d"
+}
 if (typeof module !== "undefined") {
   module.exports = {
     pluginEntry: pluginEntry, configStr: configStr, configInt: configInt, configFloat: configFloat, configBool: configBool, configList: configList,
     haversineMiles: haversineMiles, boroughFromZip: boroughFromZip, boroughAbbr: boroughAbbr,
-    normalize311: normalize311, normalizeSubway: normalizeSubway, normalizeCiti: normalizeCiti, normalizeNYPD: normalizeNYPD, normalizeAir: normalizeAir, normalizeDOB: normalizeDOB, normalizeParking: normalizeParking, normalizeLottery: normalizeLottery,
-    groupByZip: groupByZip, groupByBorough: groupByBorough, filterByTime: filterByTime, filterByBorough: filterByBorough, filterByZip: filterByZip, sortByTimeDesc: sortByTimeDesc, topComplaintTypes: topComplaintTypes, crossRef311VsSubway: crossRef311VsSubway, terminalParse: terminalParse, BOROUGHS: BOROUGHS
+    normalize311: normalize311, normalizeSubway: normalizeSubway, normalizeCiti: normalizeCiti, normalizeNYPD: normalizeNYPD, normalizeAir: normalizeAir, normalizeDOB: normalizeDOB, normalizeParking: normalizeParking, normalizeLottery: normalizeLottery, normalizeDispensaries: normalizeDispensaries,
+    groupByZip: groupByZip, groupByBorough: groupByBorough, filterByTime: filterByTime, filterByBorough: filterByBorough, filterByZip: filterByZip, sortByTimeDesc: sortByTimeDesc, topComplaintTypes: topComplaintTypes, crossRef311VsSubway: crossRef311VsSubway, terminalParse: terminalParse,
+    nearestDispensaries: nearestDispensaries, tileXY: tileXY, timeAgo: timeAgo, BOROUGHS: BOROUGHS
   }
 }

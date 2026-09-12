@@ -14,9 +14,99 @@ Item {
   property var service: null
   readonly property var effectiveService: service ? service : (shell && typeof shell.serviceFor === "function" ? shell.serviceFor("djc.yerrr") : null)
   readonly property bool ready: effectiveService !== null
+
+  property string dashMode: "overview"   // "overview" | "detail"
+  property string dashKey: ""            // dataset key for detail mode
+  property string detailQuery: ""        // search box in detail
+
   readonly property bool dashVisible: ready ? !!effectiveService.dashVisible : false
   readonly property bool capturing: ready ? !!effectiveService.capturing : false
-  onEffectiveServiceChanged: console.log("yerrr Dash: effectiveService " + (effectiveService ? "yes dashVisible=" + effectiveService.dashVisible : "null") + " shell=" + !!shell)
+  readonly property var filters: ready ? effectiveService.filters : ({ borough: "All", zip: "", hours: 24, kinds: [] })
+
+  readonly property double mLat: ready && isFinite(effectiveService.effectiveLat()) ? effectiveService.effectiveLat() : 40.7128
+  readonly property double mLon: ready && isFinite(effectiveService.effectiveLon()) ? effectiveService.effectiveLon() : -74.0060
+  readonly property int mapZoom: 13
+  readonly property int tilePx: 256
+
+  onEffectiveServiceChanged: { console.log("yerrr Dash: effectiveService " + (effectiveService ? "yes dashVisible=" + effectiveService.dashVisible : "null")); root.dashMode = "overview" }
+
+  // ---- dataset detail rows ----
+  function detailRows(key) {
+    if (!ready) return []
+    var rows = []
+    var h = Number(filters.hours || 24)
+    var bor0 = filters.borough || "All"
+    function pass(rec) {
+      if (bor0 !== "All" && String(rec.borough || "").trim().toUpperCase() !== bor0.toUpperCase()) return false
+      if (filters.zip && String(rec.zip || rec.incident_zip || rec.zip_code || "").trim() !== String(filters.zip).trim()) return false
+      return true
+    }
+    if (key === "311") {
+      var a = Y.filterByTime(effectiveService.data311, h).filter(pass)
+      a.sort(function(x, y){ return String(x.created || "").localeCompare(String(y.created || "")) * -1 })
+      for (var i = 0; i < a.length && i < 40; i++) {
+        var r = a[i]
+        rows.push({ primary: String(r.complaint || r.complaint_type || "Other"), secondary: String(r.subtype || ""), meta: String(r.address || r.street_name || ""), badge: String(r.borough || ""), ago: Y.timeAgo(r.created) })
+      }
+    } else if (key === "subway") {
+      for (i = 0; i < effectiveService.dataSubway.length && i < 40; i++) {
+        var s2 = effectiveService.dataSubway[i]
+        rows.push({ primary: String(s2.line || s2.subtype || ""), secondary: String(s2.status || ""), meta: String(s2.statusDetail || s2.detail || ""), badge: String(s2.delayMin || 0) !== "0" ? "del" : "ok", ago: "" })
+      }
+    } else if (key === "citi") {
+      var c = Y.filterByTime(effectiveService.dataCiti, h)
+      for (i = 0; i < c.length && i < 30; i++) {
+        var ci = c[i]
+        rows.push({ primary: String(ci.name || ""), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.ebikes || 0) + " ebikes", meta: String(ci.address || "") + " · " + String(ci.region || ""), badge: String(ci.docks || 0) + " docks", ago: "" })
+      }
+    } else if (key === "nypd") {
+      var n = Y.sortByTimeDesc(Y.filterByTime(effectiveService.dataNYPD, h).filter(pass))
+      for (i = 0; i < n.length && i < 40; i++) {
+        var nr = n[i]
+        rows.push({ primary: String(nr.complaint || nr.offense || ""), secondary: String(nr.subtype || nr.pdDesc || ""), meta: String(nr.address || "") + " · " + String(nr.borough || ""), badge: String(nr.premise || ""), ago: Y.timeAgo(nr.created) })
+      }
+    } else if (key === "air") {
+      var ar = Y.filterByTime(effectiveService.dataAir, h)
+      for (i = 0; i < ar.length && i < 30; i++) {
+        var air = ar[i]
+        rows.push({ primary: String(air.site || air.siteName || ""), secondary: "AQI " + String(air.aqi || "—") + " · " + String(air.category || "") + " " + String(air.pollutant || ""), meta: String(air.borough || ""), badge: String(air.aqi || "—"), ago: "" })
+      }
+    } else if (key === "dob") {
+      var d = Y.sortByTimeDesc(Y.filterByTime(effectiveService.dataDOB, h).filter(pass))
+      for (i = 0; i < d.length && i < 30; i++) {
+        var dr = d[i]
+        rows.push({ primary: String(dr.jobType || dr.job_type || "Permit"), secondary: String(dr.subtype || ""), meta: String(dr.address || "") + " · " + String(dr.borough || ""), badge: String(dr.status || ""), ago: Y.timeAgo(dr.applied || dr.issueDate || "") })
+      }
+    } else if (key === "parking") {
+      var p = Y.sortByTimeDesc(Y.filterByTime(effectiveService.dataParking, h).filter(pass))
+      for (i = 0; i < p.length && i < 30; i++) {
+        var pr = p[i]
+        rows.push({ primary: String(pr.violation || pr.offense || ""), secondary: String(pr.subtype || ""), meta: String(pr.address || "") + " · " + String(pr.borough || ""), badge: "$" + String(pr.fine || pr.amount || ""), ago: Y.timeAgo(pr.created) })
+      }
+    } else if (key === "lottery") {
+      var l = Y.sortByTimeDesc(Y.filterByTime(effectiveService.dataLottery, h).filter(pass))
+      for (i = 0; i < l.length && i < 30; i++) {
+        var lr = l[i]
+        rows.push({ primary: String(lr.winner || lr.game || "Winner"), secondary: "won " + String(lr.amount || ""), meta: String(lr.address || "") + " " + String(lr.zip || ""), badge: String(lr.prize || ""), ago: Y.timeAgo(lr.date || lr.created) })
+      }
+    } else if (key === "disp") {
+      var dr2 = effectiveService.dataDisp
+      for (i = 0; i < dr2.length && i < 40; i++) {
+        var dsp = dr2[i]
+        var mi = (isFinite(dsp.lat) && isFinite(dsp.lon)) ? Y.haversineMiles(root.mLat, root.mLon, dsp.lat, dsp.lon) : NaN
+        rows.push({ primary: String(dsp.dba || ""), secondary: String(dsp.city || "") + ", " + String(dsp.state || ""), meta: String(dsp.address || ""), badge: (isFinite(mi) ? mi.toFixed(1) + " mi" : String(dsp.status || "")), ago: "" })
+      }
+      rows.sort(function(a, b){ return a.badge.indexOf("mi") !== -1 && b.badge.indexOf("mi") !== -1 ? parseFloat(a.badge) - parseFloat(b.badge) : 0 })
+    }
+    return rows
+  }
+  function detailTitle(key) {
+    var m = { "311": "City 311 Complaints", "subway": "MTA Subway Status", "citi": "Citi Bike Availability", "nypd": "NYPD Complaints", "air": "Air Quality", "dob": "DOB Permits", "parking": "Parking Violations", "lottery": "Lottery Winners", "disp": "Cannabis Dispensaries" }
+    return m[key] || key
+  }
+  function openDetail(key) { root.dashKey = key; root.dashMode = "detail"; root.detailQuery = "" }
+  function backOverview() { root.dashMode = "overview"; root.dashKey = "" }
+
   Component.onCompleted: console.log("yerrr Dash: completed shell=" + !!shell + " service=" + !!service + " effective=" + !!effectiveService)
 
   // Root overlay window
@@ -40,14 +130,13 @@ Item {
     // Main dash card
     Rectangle {
       id: dashCard
-      width: Math.min(parent.width * 0.92, 1180)
-      height: Math.min(parent.height * 0.86, 760)
+      width: Math.min(parent.width * 0.92, 1220)
+      height: Math.min(parent.height * 0.9, 820)
       anchors.centerIn: parent
       radius: 22
       color: Util.alpha(Color.background, 0.96)
       border.width: 1
       border.color: Util.alpha(Color.foreground, 0.14)
-      // Shadow
       layer.enabled: true
 
       MouseArea { anchors.fill: parent; onClicked: {} } // block click-through
@@ -57,19 +146,20 @@ Item {
         anchors.margins: 16
         spacing: 10
 
-        // Header: wavy + borough/zip pills + filters + voice + close
+        // ============ HEADER (back / pills / voice / refresh / close) ============
         RowLayout {
           Layout.fillWidth: true
           spacing: 10
 
-          Comp.WavySprite {
-            Layout.preferredWidth: 84
-            Layout.preferredHeight: 30
-            capturing: root.capturing
-            text: "YERRR"
-            fontSize: 16
-            baseColor: root.capturing ? Color.urgent : "#00e5ff"
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleVoice() } }
+          // Back (detail only) or wavy logo (overview)
+          Item { Layout.preferredWidth: 84; Layout.preferredHeight: 30
+            MouseArea { anchors.fill: parent; visible: root.dashMode === "overview"; onClicked: { if (effectiveService) effectiveService.toggleVoice() } }
+            Comp.WavySprite { anchors.fill: parent; visible: root.dashMode === "overview"; capturing: root.capturing; text: "YERRR"; fontSize: 16; baseColor: root.capturing ? Color.urgent : "#00e5ff" }
+            Rectangle { anchors.fill: parent; visible: root.dashMode === "detail"; radius: 14; width: 78; height: 28
+              color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
+              Text { anchors.centerIn: parent; text: "← " + root.detailTitle(root.dashKey).slice(0, 16); color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11 }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.backOverview() }
+            }
           }
 
           // Borough pills
@@ -81,18 +171,18 @@ Item {
               delegate: Rectangle {
                 required property string modelData
                 height: 28; width: pillTxt.implicitWidth + 16; radius: 14
-                color: (ready && effectiveService.filters.borough === modelData) ? Util.alpha(Color.accent, 0.18) : Util.alpha(Color.foreground, 0.06)
+                color: (ready && (filters.borough === modelData)) ? Util.alpha(Color.accent, 0.18) : Util.alpha(Color.foreground, 0.06)
                 border.width: 1
-                border.color: (ready && effectiveService.filters.borough === modelData) ? Util.alpha(Color.accent, 0.32) : Util.alpha(Color.foreground, 0.08)
-                Text { id: pillTxt; anchors.centerIn: parent; text: modelData=== "All" ? "All" : Y.boroughAbbr(modelData); font.family: Style.font.family; font.pixelSize: 11; font.bold: (ready && effectiveService.filters.borough === modelData); color: (ready && effectiveService.filters.borough === modelData) ? Color.accent : Color.foreground }
+                border.color: (ready && (filters.borough === modelData)) ? Util.alpha(Color.accent, 0.32) : Util.alpha(Color.foreground, 0.08)
+                Text { id: pillTxt; anchors.centerIn: parent; text: modelData === "All" ? "All" : Y.boroughAbbr(modelData); font.family: Style.font.family; font.pixelSize: 11; font.bold: (ready && (filters.borough === modelData)); color: (ready && (filters.borough === modelData)) ? Color.accent : Color.foreground }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) { var f=effectiveService.filters; effectiveService.filters = { borough: modelData, zip: f.zip, hours: f.hours, kinds: f.kinds } } } }
               }
             }
           }
 
           Text {
-            visible: ready && effectiveService.zip !== ""
-            text: ready ? "ZIP " + effectiveService.zip : ""
+            visible: ready && filters.zip !== ""
+            text: ready ? "ZIP " + filters.zip : ""
             color: Util.alpha(Color.foreground, 0.7)
             font.family: Style.font.family; font.pixelSize: 11
             Layout.preferredWidth: implicitWidth
@@ -123,11 +213,11 @@ Item {
             width: 32; height: 28; radius: 14
             color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
             Text { anchors.centerIn: parent; text: "✕"; font.pixelSize: 12; color: Color.foreground }
-            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleDash() } }
+            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) effectiveService.toggleDash(); root.backOverview() } }
           }
         }
 
-        // Cross summary + time filter
+        // Cross summary + time filter + location
         RowLayout {
           Layout.fillWidth: true
           spacing: 8
@@ -145,150 +235,43 @@ Item {
               delegate: Rectangle {
                 required property int modelData
                 height: 22; width: 44; radius: 11
-                color: (ready && effectiveService.filters.hours === modelData) ? Util.alpha(Color.accent, 0.14) : Util.alpha(Color.foreground, 0.06)
-                border.width: 1; border.color: (ready && effectiveService.filters.hours === modelData) ? Util.alpha(Color.accent, 0.28) : Util.alpha(Color.foreground, 0.08)
-                Text { anchors.centerIn: parent; text: modelData===24 ? "24h" : "7d"; font.family: Style.font.family; font.pixelSize: 10; color: (ready && effectiveService.filters.hours === modelData) ? Color.accent : Color.foreground }
+                color: (ready && filters.hours === modelData) ? Util.alpha(Color.accent, 0.14) : Util.alpha(Color.foreground, 0.06)
+                border.width: 1; border.color: (ready && filters.hours === modelData) ? Util.alpha(Color.accent, 0.28) : Util.alpha(Color.foreground, 0.08)
+                Text { anchors.centerIn: parent; text: modelData === 24 ? "24h" : "7d"; font.family: Style.font.family; font.pixelSize: 10; color: (ready && filters.hours === modelData) ? Color.accent : Color.foreground }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService) { var f=effectiveService.filters; effectiveService.filters={ borough:f.borough, zip:f.zip, hours:modelData, kinds:f.kinds } } } }
               }
             }
           }
           Text {
-            text: ready ? (effectiveService.locationSource!=="none" ? ("📍 " + (effectiveService.zip||effectiveService.borough||"loc") + " ±" + (isFinite(effectiveService.accuracy)? Math.round(effectiveService.accuracy)+"m" : "")) : "locating…") : ""
+            text: ready ? (effectiveService.locationSource !== "none" ? ("📍 " + (filters.zip || effectiveService.borough || "loc") + (isFinite(effectiveService.accuracy) ? " ±" + Math.round(effectiveService.accuracy) + "m" : "")) : "locating…") : ""
             color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10
           }
         }
 
         Rectangle { Layout.fillWidth: true; height: 1; color: Util.alpha(Color.foreground, 0.08) }
 
-        // Main content: left map placeholder + right cards
-        RowLayout {
+        // ============ CONTENT ============
+        // Overview: map + local-update chips + tiles
+        // Detail: dataset rows
+        Item {
           Layout.fillWidth: true
           Layout.fillHeight: true
-          spacing: 12
-
-          // Map placeholder (replace with WebEngine later)
-          Rectangle {
-            Layout.preferredWidth: 360
-            Layout.fillHeight: true
-            radius: 14
-            color: Util.alpha(Color.foreground, 0.04)
-            border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
-            Column {
-              anchors.centerIn: parent
-              spacing: 8
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: "🗽"; font.pixelSize: 36 }
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: "NYC Map — OSM/tiles soon"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 11 }
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: ready ? (isFinite(effectiveService.effectiveLat()) ? effectiveService.effectiveLat().toFixed(4)+", "+effectiveService.effectiveLon().toFixed(4) : "no location") : ""; color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 10 }
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Cross-ref: 311 • subway • citi"; color: Util.alpha(Color.accent, 0.7); font.family: Style.font.family; font.pixelSize: 10 }
-            }
+          clip: true
+          Loader {
+            id: contentLoader
+            anchors.fill: parent
+            visible: root.dashMode === "overview"
+            sourceComponent: overviewComp
           }
-
-          // Cards scroll
-          Flickable {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            contentHeight: cardsCol.implicitHeight
-            clip: true
-            flickableDirection: Flickable.VerticalFlick
-            interactive: cardsCol.implicitHeight > height
-            boundsBehavior: Flickable.StopAtBounds
-
-            Column {
-              id: cardsCol
-              width: parent.width
-              spacing: 10
-
-              // Helper to count filtered 311
-              property var filtered311: ready ? (function(){
-                var a = Y.filterByTime(effectiveService.data311, effectiveService.filters.hours)
-                if (effectiveService.filters.borough!=="All") a = Y.filterByBorough(a, effectiveService.filters.borough)
-                if (effectiveService.filters.zip) a = Y.filterByZip(a, effectiveService.filters.zip)
-                return a
-              })() : []
-
-              // 311 card
-              Rectangle {
-                width: parent.width; radius: 12
-                height: col311.implicitHeight + 20
-                color: Util.alpha(Color.background, 0.92); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
-                Column { id: col311; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 12; spacing: 6
-                  Row { width: parent.width; spacing: 8
-                    Text { text: "311"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 13; font.bold: true }
-                    Rectangle { height: 18; width: txt311.implicitWidth+10; radius: 8; color: Util.alpha(Color.accent,0.12); border.width:1; border.color: Util.alpha(Color.accent,0.22)
-                      Text { id: txt311; anchors.centerIn: parent; text: ready ? String(cardsCol.filtered311.length) + " in " + effectiveService.filters.hours + "h" : "—"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10 }
-                    }
-                    Text { text: ready && effectiveService.filters.borough!=="All" ? effectiveService.filters.borough : ""; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
-                  }
-                  Repeater {
-                    model: ready ? Y.topComplaintTypes(cardsCol.filtered311, 3) : []
-                    delegate: Row { required property var modelData; spacing: 6; width: col311.width
-                      Text { text: modelData.type; color: Util.alpha(Color.foreground,0.75); font.family: Style.font.family; font.pixelSize: 11; width: parent.width*0.62; elide: Text.ElideRight }
-                      Text { text: String(modelData.count); color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 11 }
-                    }
-                  }
-                  Text { width: parent.width; wrapMode: Text.Wrap; text: ready && cardsCol.filtered311.length>0 ? String(cardsCol.filtered311[0].subtype || "") + " — " + String(cardsCol.filtered311[0].descriptor||"").slice(0,80) : "No 311 in filter"; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; elide: Text.ElideRight }
-                }
-              }
-
-              // Subway card
-              Rectangle {
-                width: parent.width; radius: 12
-                height: colSub.implicitHeight + 20
-                color: Util.alpha(Color.background, 0.92); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
-                Column { id: colSub; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 12; spacing: 6
-                  Row { width: parent.width; spacing: 8
-                    Text { text: "MTA Subway"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 13; font.bold: true }
-                    Text { text: ready ? String(effectiveService.dataSubway.length) + " lines" : "—"; color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
-                  }
-                  Repeater {
-                    model: ready ? effectiveService.dataSubway.slice(0,4) : []
-                    delegate: Row { required property var modelData; spacing: 8; width: colSub.width
-                      Rectangle { width: 28; height: 18; radius: 4; color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Util.alpha(Color.urgent,0.18) : Util.alpha(Color.accent,0.12); border.width:1; border.color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Util.alpha(Color.urgent,0.28) : Util.alpha(Color.accent,0.22)
-                        Text { anchors.centerIn: parent; text: String(modelData.subtype||"").slice(0,3); font.family: Style.font.family; font.pixelSize: 10; font.bold: true; color: (String(modelData.status).toLowerCase().indexOf("del")!==-1) ? Color.urgent : Color.accent }
-                      }
-                      Text { text: String(modelData.status||"Good service").slice(0,64); color: Util.alpha(Color.foreground,0.75); font.family: Style.font.family; font.pixelSize: 11; width: parent.width - 36; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
-                    }
-                  }
-                  Text { visible: ready && effectiveService.dataSubway.length===0; text: "No subway data yet — polling every 30s"; color: Util.alpha(Color.foreground,0.45); font.family: Style.font.family; font.pixelSize: 10 }
-                }
-              }
-
-              // Citi / NYPD / Air / DOB / Parking / Lottery small grid
-              GridLayout {
-                width: parent.width
-                columns: 2
-                columnSpacing: 10
-                rowSpacing: 10
-
-                Repeater {
-                  model: ready ? [
-                    {k:"Citi Bike", v: effectiveService.dataCiti.length + " stations", c: effectiveService.dataCiti.slice(0,1)[0] ? (effectiveService.dataCiti[0].bikes + " bikes") : "—"},
-                    {k:"NYPD", v: effectiveService.dataNYPD.length + " complaints", c: (Y.topComplaintTypes(effectiveService.dataNYPD,1)[0] ? Y.topComplaintTypes(effectiveService.dataNYPD,1)[0].type : "—")},
-                    {k:"Air Quality", v: effectiveService.dataAir.length + " sites", c: effectiveService.dataAir[0] ? ("AQI " + String(effectiveService.dataAir[0].aqi||"")) : "—"},
-                    {k:"DOB Permits", v: effectiveService.dataDOB.length + " permits", c: effectiveService.dataDOB[0] ? String(effectiveService.dataDOB[0].subtype||"").slice(0,22) : "—"},
-                    {k:"Parking", v: effectiveService.dataParking.length + " violations", c: effectiveService.dataParking[0] ? String(effectiveService.dataParking[0].subtype||"").slice(0,22) : "—"},
-                    {k:"Lottery", v: effectiveService.dataLottery.length + " winners", c: effectiveService.dataLottery[0] ? (String(effectiveService.dataLottery[0].zip||"") + " " + String(effectiveService.dataLottery[0].amount||"").slice(0,12)) : "—"}
-                  ] : []
-                  delegate: Rectangle {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    height: 64; radius: 10
-                    color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07)
-                    Column { anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; anchors.margins: 10; spacing: 2
-                      Text { text: modelData.k; color: Util.alpha(Color.foreground,0.6); font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
-                      Text { text: modelData.v; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 12; font.bold: true; elide: Text.ElideRight; width: parent.width }
-                      Text { text: modelData.c; color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
-                    }
-                  }
-                }
-              }
-
-              Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Data: NYC Open Data (Socrata) • MTA GTFS • Citi GBFS • NY Lottery • cross-ref by ZIP/borough/time"; color: Util.alpha(Color.foreground,0.32); font.family: Style.font.family; font.pixelSize: 9; wrapMode: Text.Wrap }
-            }
+          Loader {
+            id: detailLoader
+            anchors.fill: parent
+            visible: root.dashMode === "detail"
+            sourceComponent: detailComp
           }
         }
 
-        // Terminal strip
+        // ============ TERMINAL ============
         Rectangle {
           Layout.fillWidth: true
           height: 84
@@ -323,7 +306,7 @@ Item {
                 onTextChanged: { if (effectiveService) effectiveService.terminalText = text }
                 Keys.onReturnPressed: { if (effectiveService) effectiveService.handleTerminalSubmit(text); termInput.text = "" }
                 Keys.onEnterPressed: { if (effectiveService) effectiveService.handleTerminalSubmit(text); termInput.text = "" }
-                Keys.onEscapePressed: { if (effectiveService) effectiveService.toggleDash() }
+                Keys.onEscapePressed: { if (effectiveService) effectiveService.toggleDash(); root.backOverview() }
               }
               Rectangle {
                 width: 28; height: 22; radius: 6
@@ -333,13 +316,210 @@ Item {
               }
             }
             Text {
-              text: "try:  \"bk 311 24h\"  \"queens subway\"  \"11211 citi\"  \"clear\"  \"refresh\""
+              text: "try:  \"bk 311 24h\"  \"queens subway\"  \"11211 citi\"  \"disp near\"  \"clear\"  \"refresh\""
               color: Util.alpha("#7af0ff", 0.45)
               font.family: "monospace"
               font.pixelSize: 9
             }
           }
         }
+      }
+    }
+  }
+
+  // ================= OVERVIEW =================
+  Component {
+    id: overviewComp
+    ColumnLayout {
+      anchors.fill: parent
+      spacing: 10
+
+      // Local updates strip (clickable chips)
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+        Comp.Chip { text: "311"; value: root.ready ? String(root.filters.borough === "All" ? Y.filterByTime(root.effectiveService.data311, root.filters.hours).length : Y.filterByTime(root.effectiveService.data311, root.filters.hours).filter(function(r){ return String(r.borough||"").toUpperCase() === root.filters.borough.toUpperCase() }).length) + " in " + root.filters.hours + "h" : "—"; onClicked: root.openDetail("311") }
+        Comp.Chip {
+          text: "Subway"
+          value: root.ready ? (function(){ var d=0, rows=[]; for (var i=0;i<root.effectiveService.dataSubway.length;i++){ var s=root.effectiveService.dataSubway[i]; if(String(s.status||"").toLowerCase().indexOf("del")!==-1) d++; rows.push(String(s.subtype||"").slice(0,3)) } return d ? d + " delayed · " + rows.join(" ") : (rows.join(" ") || "on time") })() : "—"
+          onClicked: root.openDetail("subway")
+        }
+        Comp.Chip {
+          text: "Citi"
+          value: root.ready ? String(root.effectiveService.dataCiti.length) + " stations · " + (Y.filterByTime(root.effectiveService.dataCiti, root.filters.hours)[0] ? Y.filterByTime(root.effectiveService.dataCiti, root.filters.hours)[0].bikes + " bikes" : "—") : "—"
+          onClicked: root.openDetail("citi")
+        }
+        Comp.Chip {
+          text: "Pot Head"
+          value: root.ready ? (function(){ var near = Y.nearestDispensaries(root.effectiveService.dataDisp, root.mLat, root.mLon, 1); return near.length ? (String(near[0].rec.dba || "").slice(0, 22) + " · " + near[0].miles.toFixed(1) + "mi") : ("0 fit filter · " + root.effectiveService.dataDisp.length + " NY") })() : "—"
+          onClicked: root.openDetail("disp")
+        }
+        Comp.Chip { text: "Lottery"; value: root.ready ? Y.filterByTime(root.effectiveService.dataLottery, root.filters.hours).length + " winners" : "—"; onClicked: root.openDetail("lottery") }
+        Item { Layout.fillWidth: true }
+        Text { text: "tap a card to explore →"; color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 10 }
+      }
+
+      RowLayout {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        spacing: 12
+
+        // Map
+        Rectangle {
+          Layout.preferredWidth: 400
+          Layout.fillHeight: true
+          radius: 14
+          clip: true
+          color: "#0d1117"
+          border.width: 1; border.color: Util.alpha("#00e5ff", 0.16)
+
+          // OSM tiles 3x3 centered on location
+          Item {
+            id: map
+            anchors.fill: parent
+            clip: true
+            readonly property var t0: Y.tileXY(root.mLat, root.mLon, root.mapZoom)
+            readonly property double cx: width / 2
+            readonly property double cy: height / 2
+
+            Repeater {
+              model: 9
+              delegate: Comp.TileImg {
+                required property int index
+                x: map.cx - 128 - map.t0.fx * 256 + ((index % 3) - 1) * 256
+                y: map.cy - 128 - map.t0.fy * 256 + (Math.floor(index / 3) - 1) * 256
+                txx: map.t0.tx + (index % 3) - 1
+                tyy: map.t0.ty + Math.floor(index / 3) - 1
+                zz: root.mapZoom
+                src: root.ready ? ("file:///" + root.effectiveService.mapTileDir + "/" + root.mapZoom + "/" + (map.t0.tx + (index % 3) - 1) + "_" + (map.t0.ty + Math.floor(index / 3) - 1) + ".png") : ""
+              }
+            }
+
+            // Location marker
+            Rectangle {
+              x: map.cx - 10; y: map.cy - 10; width: 20; height: 20; radius: 10
+              color: "#00e5ff"; border.width: 2; border.color: "white"
+              Rectangle { anchors.centerIn: parent; width: 6; height: 6; radius: 3; color: "white" }
+              Text {
+                anchors.bottom: parent.top; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottomMargin: 4
+                text: root.ready && root.filters.zip !== "" ? "ZIP " + root.filters.zip : (root.ready && root.effectiveService.borough ? root.effectiveService.borough : "YOU")
+                color: "white"; font.family: Style.font.family; font.pixelSize: 10; font.bold: true
+                style: Text.Outline; styleColor: "#000000"
+              }
+            }
+          }
+
+          // Zoom label overlay
+          Text {
+            anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 8
+            text: "OSM z" + root.mapZoom + " · " + root.mLat.toFixed(4) + ", " + root.mLon.toFixed(4)
+            color: Util.alpha("#00e5ff", 0.8); font.family: "monospace"; font.pixelSize: 9
+            style: Text.Outline; styleColor: "#000000"
+          }
+        }
+
+        // Dataset tiles grid
+        ColumnLayout {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          spacing: 10
+
+          // Left/right tiles: 311 + Subway wide cards on top
+          RowLayout { Layout.fillWidth: true; spacing: 10
+            Comp.TileWide { Layout.fillWidth: true; title: "311"; count: root.ready ? String(Y.filterByTime(root.effectiveService.data311, root.filters.hours).length) + " in " + root.filters.hours + "h" : "—"; subtitle: root.ready ? (Y.topComplaintTypes(root.effectiveService.data311, 1)[0] ? Y.topComplaintTypes(root.effectiveService.data311, 1)[0].type : "no complaints") : ""; onClicked: root.openDetail("311") }
+            Comp.TileWide { Layout.fillWidth: true; title: "Subway"; count: root.ready ? root.effectiveService.dataSubway.length + " lines" : "—"; subtitle: root.ready ? (function(){ var d=0; for (var i=0;i<root.effectiveService.dataSubway.length;i++) if(String(root.effectiveService.dataSubway[i].status||"").toLowerCase().indexOf("del")!==-1) d++; return d ? d + " delayed" : "Good service" })() : ""; onClicked: root.openDetail("subway") }
+          }
+
+          GridLayout {
+            Layout.fillWidth: true
+            columns: 4
+            columnSpacing: 8
+            rowSpacing: 8
+
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "Citi"; value: root.ready ? root.effectiveService.dataCiti.length + " stations" : "—"; sub: root.ready ? (root.effectiveService.dataCiti[0] ? root.effectiveService.dataCiti[0].bikes + " bikes" : "—") : ""; onClicked: root.openDetail("citi") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "NYPD"; value: root.ready ? root.effectiveService.dataNYPD.length + " complaints" : "—"; sub: root.ready ? (Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0] ? Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0].type : "—") : ""; onClicked: root.openDetail("nypd") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "Air"; value: root.ready ? root.effectiveService.dataAir.length + " sites" : "—"; sub: root.ready ? (root.effectiveService.dataAir[0] ? "AQI " + String(root.effectiveService.dataAir[0].aqi || "") : "—") : ""; onClicked: root.openDetail("air") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "DOB"; value: root.ready ? root.effectiveService.dataDOB.length + " permits" : "—"; sub: root.ready ? (root.effectiveService.dataDOB[0] ? String(root.effectiveService.dataDOB[0].subtype || "").slice(0, 20) : "—") : ""; onClicked: root.openDetail("dob") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "Parking"; value: root.ready ? root.effectiveService.dataParking.length + " tickets" : "—"; sub: root.ready ? (root.effectiveService.dataParking[0] ? String(root.effectiveService.dataParking[0].subtype || "").slice(0, 20) : "—") : ""; onClicked: root.openDetail("parking") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "Lottery"; value: root.ready ? root.effectiveService.dataLottery.length + " winners" : "—"; sub: root.ready ? (root.effectiveService.dataLottery[0] ? String(root.effectiveService.dataLottery[0].zip || "") + " · " + String(root.effectiveService.dataLottery[0].amount || "").slice(0, 12) : "—") : ""; onClicked: root.openDetail("lottery") }
+            Comp.Tile { Layout.fillWidth: true; Layout.fillHeight: true; title: "Dispensaries"; value: root.ready ? root.effectiveService.dataDisp.length + " NY retail" : "—"; sub: root.ready ? (root.effectiveService.dataDisp[0] ? String(root.effectiveService.dataDisp[0].dba || "").slice(0, 20) : "—") : ""; onClicked: root.openDetail("disp") }
+            Item {}
+          }
+
+          Item { Layout.fillHeight: true; Layout.fillWidth: true }
+        }
+      }
+
+      Text {
+        Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
+        text: "NYC Open Data (Socrata) · MTA GTFS · Citi GBFS · NY Lottery · NY OCM — cross-ref by ZIP / borough / time"
+        color: Util.alpha(Color.foreground, 0.3); font.family: Style.font.family; font.pixelSize: 9; wrapMode: Text.Wrap
+      }
+    }
+  }
+
+  // ================= DETAIL =================
+  Component {
+    id: detailComp
+    ColumnLayout {
+      anchors.fill: parent
+      spacing: 8
+
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+
+        Text {
+          text: root.detailTitle(root.dashKey)
+          color: Color.foreground; font.family: Style.font.family; font.pixelSize: 15; font.bold: true
+          Layout.preferredWidth: implicitWidth
+        }
+        Rectangle {
+          height: 20; width: subtxt.implicitWidth + 10; radius: 10
+          color: Util.alpha(Color.accent, 0.12); border.width: 1; border.color: Util.alpha(Color.accent, 0.22)
+          Text { id: subtxt; anchors.centerIn: parent; text: root.detailRows(root.dashKey).length + " shown"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10 }
+        }
+        Item { Layout.fillWidth: true }
+        Rectangle {
+          width: 130; height: 24; radius: 12
+          color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
+          Text { anchors.centerIn: parent; text: "🔍 type filters in ❯"; color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10 }
+        }
+      }
+
+      Rectangle { Layout.fillWidth: true; height: 1; color: Util.alpha(Color.foreground, 0.08) }
+
+      ListView {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        clip: true
+        spacing: 6
+        model: root.detailRows(root.dashKey)
+        delegate: Row {
+          required property var modelData
+          width: ListView.view.width - 4
+          height: 48
+          Rectangle { anchors.fill: parent; radius: 10; color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07) }
+          Row {
+            anchors.fill: parent; anchors.margins: 8; spacing: 10
+            Rectangle {
+              width: 46; height: 20; radius: 8; anchors.verticalCenter: parent.verticalCenter
+              color: String(modelData.badge || "").toLowerCase().indexOf("del") !== -1 ? Util.alpha(Color.urgent, 0.16) : Util.alpha(Color.accent, 0.12)
+              border.width: 1; border.color: String(modelData.badge || "").toLowerCase().indexOf("del") !== -1 ? Util.alpha(Color.urgent, 0.28) : Util.alpha(Color.accent, 0.2)
+              Text { anchors.centerIn: parent; text: String(modelData.badge || "").slice(0, 12); color: String(modelData.badge || "").toLowerCase().indexOf("del") !== -1 ? Color.urgent : Color.accent; font.family: Style.font.family; font.pixelSize: 9; font.bold: true; elide: Text.ElideRight; width: 40; horizontalAlignment: Text.AlignHCenter }
+            }
+            Column { anchors.verticalCenter: parent.verticalCenter; spacing: 1; width: parent.width - 56
+              Text { text: String(modelData.primary || ""); color: Color.foreground; font.family: Style.font.family; font.pixelSize: 12; font.bold: true; elide: Text.ElideRight; width: parent.width }
+              Text { text: (String(modelData.secondary || "") + (modelData.meta ? "  ·  " + modelData.meta : "")).slice(0, 140); color: Util.alpha(Color.foreground, 0.55); font.family: Style.font.family; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
+            }
+            Text { text: modelData.ago || ""; color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+          }
+        }
+      }
+      Text {
+        Layout.fillWidth: true
+        text: root.detailQuery !== "" ? "Search filters not yet wired — use header pills / terminal" : "Use —  head banner: tap “❯” below and type e.g. \"queens subway\", \"11249 disp\""
+        color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 9
       }
     }
   }

@@ -100,7 +100,7 @@ BarWidget {
         Text { text: ready ? service.crossSummary : "Loading NYC…"; color: Util.alpha(Color.foreground,0.65); font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; width: parent.width - 80; anchors.verticalCenter: parent.verticalCenter }
       }
       Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.foreground,0.08) }
-      Text { width: parent.width; wrapMode: Text.Wrap; text: ready ? ("📍 " + (service.zip||service.borough||"loc") + " • " + service.data311.length + " 311 • " + service.dataSubway.length + " subway • " + service.dataNYPD.length + " NYPD") : "Loading…"; color: Util.alpha(Color.foreground,0.6); font.family: Style.font.family; font.pixelSize: 11 }
+      Text { width: parent.width; wrapMode: Text.Wrap; text: ready ? ("📍 " + (service.zip||service.borough||"loc") + " • " + service.data311.length + " 311 • " + service.dataSubway.length + " subway • " + service.dataDisp.length + " dispos") : "Loading…"; color: Util.alpha(Color.foreground,0.6); font.family: Style.font.family; font.pixelSize: 11 }
       GridLayout {
         width: parent.width
         columns: 2
@@ -111,6 +111,7 @@ BarWidget {
             {k:"311", v: service.data311.length + " • " + (service.data311[0] ? String(service.data311[0].subtype||"").slice(0,22) : "—")},
             {k:"Subway", v: service.dataSubway.length + " lines • " + (service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,22) : "—")},
             {k:"Citi", v: service.dataCiti.length + " stations"},
+            {k:"Dispensaries", v: service.dataDisp.length + " NY retail"},
             {k:"Lottery", v: service.dataLottery.length + " winners"}
           ] : []
           delegate: Rectangle {

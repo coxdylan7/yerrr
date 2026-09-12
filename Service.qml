@@ -28,6 +28,8 @@ Item {
   readonly property string cacheDOB: cacheDir + "/dob.json"
   readonly property string cacheParking: cacheDir + "/parking.json"
   readonly property string cacheLottery: cacheDir + "/lottery.json"
+  readonly property string cacheDisp: cacheDir + "/dispensaries.json"
+  readonly property string mapTileDir: cacheDir + "/tiles"
   readonly property string locationCache: cacheDir + "/location.json"
   readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
   readonly property string voxtypeStateFile: runtimeDir + "/voxtype/state"
@@ -42,6 +44,8 @@ Item {
   readonly property string helperDOB:     { var u=Qt.resolvedUrl("./helpers/fetch-dob.py");            var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
   readonly property string helperParking: { var u=Qt.resolvedUrl("./helpers/fetch-parking.py");        var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
   readonly property string helperLottery: { var u=Qt.resolvedUrl("./helpers/fetch-lottery.py");        var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
+  readonly property string helperDisp:  { var u=Qt.resolvedUrl("./helpers/fetch-dispensaries.py"); var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
+  readonly property string helperTiles: { var u=Qt.resolvedUrl("./helpers/fetch-map-tiles.py");      var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
 
   FileView {
     id: shellConfigFile
@@ -89,6 +93,7 @@ Item {
   property var dataDOB: []
   property var dataParking: []
   property var dataLottery: []
+  property var dataDisp: []
   property string lastError: ""
   property string lastUpdate: ""
 
@@ -192,6 +197,8 @@ Item {
   function fetchDOB()    { procDOB.collected=""; procDOB.command=["/usr/bin/python3", helperDOB, cacheDOB, "100", appToken]; procDOB.running=true }
   function fetchParking(){ procParking.collected=""; procParking.command=["/usr/bin/python3", helperParking, cacheParking, "100", appToken]; procParking.running=true }
   function fetchLottery(){ procLottery.collected=""; procLottery.command=["/usr/bin/python3", helperLottery, cacheLottery]; procLottery.running=true }
+  function fetchDisp()  { procDisp.collected=""; procDisp.command=["/usr/bin/python3", helperDisp, cacheDisp, "300", appToken]; procDisp.running=true }
+  function fetchMapTiles() { var lat = isFinite(root.effectiveLat()) ? root.effectiveLat() : 40.7128; var lon = isFinite(root.effectiveLon()) ? root.effectiveLon() : -74.0060; procTiles.collected=""; procTiles.command=["/usr/bin/python3", helperTiles, cacheDir, String(lat), String(lon), "13"]; procTiles.running=true }
 
   function handleCache(proc, setter, kind) {
     var txt = proc.collected; proc.collected=""
@@ -209,7 +216,7 @@ Item {
   function refreshAll() {
     root.ensureCacheDir()
     root.fetchLocation()
-    root.fetch311(); root.fetchSubway(); root.fetchCiti(); root.fetchNYPD(); root.fetchAir(); root.fetchDOB(); root.fetchParking(); root.fetchLottery()
+    root.fetch311(); root.fetchSubway(); root.fetchCiti(); root.fetchNYPD(); root.fetchAir(); root.fetchDOB(); root.fetchParking(); root.fetchLottery(); root.fetchDisp(); Qt.callLater(function(){ root.fetchMapTiles() })
   }
 
   // Voice (reuse tomb-stone pattern, absolute)
@@ -279,6 +286,18 @@ Item {
     onExited: function(code, status){ root.handleCache(procLottery, function(v){ root.dataLottery = v }, "lottery") }
   }
   Process {
+    id: procDisp
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procDisp.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procDisp, function(v){ root.dataDisp = v }, "disp") }
+  }
+  Process {
+    id: procTiles
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ procTiles.collected += data + "\n" } }
+    onExited: function(code, status){ root.handleCache(procTiles, function(v){ console.log("yerrr: tiles updated"); }, "tiles") }
+  }
+  Process {
     id: locationProc
     property string collected: ""
     stdout: SplitParser { onRead: function(data){ locationProc.collected += data + "\n" } }
@@ -314,6 +333,8 @@ Item {
   Timer { id: timerDOB;     interval: 3600000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchDOB() }        // 60m
   Timer { id: timerParking; interval: 86400000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchParking() }  // daily
   Timer { id: timerLottery; interval: 3600000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchLottery() }   // 60m
+  Timer { id: timerDisp;    interval: 3600000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchDisp() }      // 60m
+  Timer { id: timerTiles;   interval: 1800000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchMapTiles() }     // 30m
 
   Component.onCompleted: {
     console.log("yerrr: starting — cacheDir " + cacheDir)
@@ -328,5 +349,7 @@ Item {
     Qt.callLater(function(){ root.fetchDOB() })
     Qt.callLater(function(){ root.fetchParking() })
     Qt.callLater(function(){ root.fetchLottery() })
+    Qt.callLater(function(){ root.fetchDisp() })
+    Qt.callLater(function(){ root.fetchMapTiles() })
   }
 }
