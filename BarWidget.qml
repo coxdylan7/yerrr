@@ -4,6 +4,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 import "components" as Comp
+import "Yerrr.js" as Y
 
 BarWidget {
   id: root
@@ -112,10 +113,10 @@ BarWidget {
           model: ready ? [
             {k:"311", key:"311", v: service.data311.length + " reports", sub: service.data311[0] ? String(service.data311[0].subtype||"").slice(0,20) : "—"},
             {k:"Subway", key:"subway", v: service.dataSubway.length + " lines", sub: service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,20) : "—"},
-            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations", sub: service.dataCiti[0] ? (service.dataCiti[0].bikes + " bikes") : "—"},
-            {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " retail", sub: service.dataDisp[0] ? String(service.dataDisp[0].dba||"").slice(0,18) : "—"},
+            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations", sub: service.dataCiti[0] ? (service.dataCiti[0].bikes + " bikes • " + (service.dataCiti[0].name||"").slice(0,14)) : "—"},
+            {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " retail", sub: service.dataDisp[0] ? String(service.dataDisp[0].dba||"").slice(0,18) + (service.dataDisp[0].zip ? " • " + service.dataDisp[0].zip : "") : "—"},
             {k:"NYPD", key:"nypd", v: service.dataNYPD.length + " complaints", sub: service.dataNYPD[0] ? String(service.dataNYPD[0].subtype||"").slice(0,18) : "—"},
-            {k:"Lottery", key:"lottery", v: service.dataLottery.length + " winners", sub: service.dataLottery[0] ? String(service.dataLottery[0].subtype||"").slice(0,18) : "—"}
+            {k:"Lottery", key:"lottery", v: service.dataLottery[0] ? String(service.dataLottery[0].raw.winning_numbers||"").slice(0,18) : service.dataLottery.length + " winners", sub: service.dataLottery[0] ? String(service.dataLottery[0].subtype||"") + " " + Y.timeAgo(new Date(service.dataLottery[0].ts).toISOString()) : "—"}
           ] : []
           delegate: Rectangle {
             required property var modelData

@@ -501,9 +501,15 @@ Item {
               }
             }
 
-            // Pins for events - 311 (red), Citi (blue), Disp (green) - above drag
+            // Pins for events - filtered by current borough/zip/hours, clickable to pan
             Repeater {
-              model: root.ready ? Y.filterByTime(root.effectiveService.data311, root.filters.hours).filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,25) : []
+              model: root.ready ? (function(){
+                var bor = root.filters.borough, zip = root.filters.zip, h = root.filters.hours
+                function pass(r){ if (bor!=="All" && String(r.borough||"").toUpperCase()!==bor.toUpperCase()) return false; if (zip && String(r.zip||"").trim()!==String(zip).trim()) return false; return true }
+                var a = Y.filterByTime(root.effectiveService.data311, h).filter(pass).filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) })
+                if (a.length===0) a = root.effectiveService.data311.filter(pass).filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) })
+                return a.slice(0,20)
+              })() : []
               delegate: Rectangle {
                 required property var modelData
                 property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
@@ -517,14 +523,18 @@ Item {
                   anchors.margins: -4
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: { root.openDetail("311"); root.detailQuery = modelData.zip || modelData.borough }
+                  onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 14; root.openDetail("311"); root.detailQuery = modelData.zip || modelData.borough }
                   onEntered: parent.scale = 1.5
                   onExited: parent.scale = 1.0
                 }
               }
             }
             Repeater {
-              model: root.ready ? root.effectiveService.dataCiti.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,20) : []
+              model: root.ready ? (function(){
+                var bor = root.filters.borough, zip = root.filters.zip
+                function pass(r){ if (bor!=="All" && String(r.borough||"").toUpperCase()!==bor.toUpperCase()) return false; if (zip && String(r.zip||"").trim()!==String(zip).trim()) return false; return true }
+                return root.effectiveService.dataCiti.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).filter(pass).slice(0,15)
+              })() : []
               delegate: Rectangle {
                 required property var modelData
                 property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
@@ -534,11 +544,15 @@ Item {
                 z: 10
                 color: "#3b82f6"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🚲"; font.pixelSize: 8 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: root.openDetail("citi") }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openDetail("citi") } }
               }
             }
             Repeater {
-              model: root.ready ? root.effectiveService.dataDisp.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,15) : []
+              model: root.ready ? (function(){
+                var bor = root.filters.borough, zip = root.filters.zip
+                function pass(r){ if (bor!=="All" && String(r.borough||"").toUpperCase()!==bor.toUpperCase()) return false; if (zip && String(r.zip||"").trim()!==String(zip).trim()) return false; return true }
+                return root.effectiveService.dataDisp.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).filter(pass).slice(0,12)
+              })() : []
               delegate: Rectangle {
                 required property var modelData
                 property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
@@ -548,7 +562,7 @@ Item {
                 z: 10
                 color: "#22c55e"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🌿"; font.pixelSize: 9 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: root.openDetail("disp") }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openDetail("disp") } }
               }
             }
 
@@ -575,16 +589,17 @@ Item {
               Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "+"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.min(16, map.panZoom+1) } }
               Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "−"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.max(10, map.panZoom-1) } }
               Rectangle { width: 28; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.08); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12); Text { anchors.centerIn: parent; text: "⌖"; color: Color.foreground; font.pixelSize: 12 } MouseArea { anchors.fill: parent; onClicked: { map.panLat = root.mLat; map.panLon = root.mLon; map.panZoom = root.mapZoom } } }
+              Rectangle { width: 46; height: 24; radius: 6; color: Util.alpha(Color.accent, 0.18); border.width: 1; border.color: Util.alpha(Color.accent, 0.32); Text { anchors.centerIn: parent; text: "📍 Set"; color: Color.accent; font.pixelSize: 10; font.bold: true } MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (root.effectiveService && root.effectiveService.setLocation) root.effectiveService.setLocation(map.panLat, map.panLon, "map"); map.panLat = map.panLat; map.panLon = map.panLon } } }
             }
             Text {
-              text: "OSM z" + map.panZoom + " · " + map.panLat.toFixed(4) + ", " + map.panLon.toFixed(4)
+              text: "OSM z" + map.panZoom + " · " + map.panLat.toFixed(4) + ", " + map.panLon.toFixed(4) + (root.effectiveService && root.effectiveService.locationOverridden ? " • 📍 custom" : "")
               color: Util.alpha(Color.accent, 0.85); font.family: "monospace"; font.pixelSize: 9
               style: Text.Outline; styleColor: Util.alpha(Color.background, 0.85)
             }
           }
           Text {
             anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8
-            text: "drag to pan • scroll to zoom • pins: 311 red, Citi blue, Disp green"
+            text: "drag to pan • scroll to zoom • pins: 311 red, Citi blue, Disp green • Set 📍 to move data"
             color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 8
           }
         }
@@ -607,19 +622,19 @@ Item {
             columnSpacing: 8
             rowSpacing: 8
 
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Citi"; value: root.ready ? root.effectiveService.dataCiti.length + " stations" : "—"; sub: root.ready ? (root.effectiveService.dataCiti[0] ? String(root.effectiveService.dataCiti[0].bikes) + " bikes" : "—") : ""; onClicked: root.openDetail("citi") }
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "NYPD"; value: root.ready ? root.effectiveService.dataNYPD.length + " complaints" : "—"; sub: root.ready ? (Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0] ? Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0].type.slice(0,18) : "—") : ""; onClicked: root.openDetail("nypd") }
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Citi"; value: root.ready ? root.effectiveService.dataCiti.length + " stations" : "—"; sub: root.ready ? (root.effectiveService.dataCiti[0] ? String(root.effectiveService.dataCiti[0].name||root.effectiveService.dataCiti[0].id||"").slice(0,16) + " · " + root.effectiveService.dataCiti[0].bikes + "🚲" : "—") : ""; onClicked: root.openDetail("citi") }
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "NYPD"; value: root.ready ? root.effectiveService.dataNYPD.length + " complaints" : "—"; sub: root.ready ? (Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0] ? Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0].type.slice(0,16) : "—") : ""; onClicked: root.openDetail("nypd") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Air"; value: root.ready ? root.effectiveService.dataAir.length + " sites" : "—"; sub: root.ready ? (root.effectiveService.dataAir[0] ? "AQI " + String(root.effectiveService.dataAir[0].aqi || "") : "—") : ""; onClicked: root.openDetail("air") }
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "DOB"; value: root.ready ? root.effectiveService.dataDOB.length + " permits" : "—"; sub: root.ready ? (root.effectiveService.dataDOB[0] ? String(root.effectiveService.dataDOB[0].subtype || "").slice(0, 18) : "—") : ""; onClicked: root.openDetail("dob") }
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Parking"; value: root.ready ? root.effectiveService.dataParking.length + " tickets" : "—"; sub: root.ready ? (root.effectiveService.dataParking[0] ? String(root.effectiveService.dataParking[0].subtype || "").slice(0, 18) : "—") : ""; onClicked: root.openDetail("parking") }
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Dispensaries"; value: root.ready ? root.effectiveService.dataDisp.length + " retail" : "—"; sub: root.ready ? (root.effectiveService.dataDisp[0] ? String(root.effectiveService.dataDisp[0].dba || "").slice(0, 18) : "—") : ""; onClicked: root.openDetail("disp") }
-            // Lottery as compact chip, not full tile
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "DOB"; value: root.ready ? root.effectiveService.dataDOB.length + " permits" : "—"; sub: root.ready ? (root.effectiveService.dataDOB[0] ? String(root.effectiveService.dataDOB[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("dob") }
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Parking"; value: root.ready ? root.effectiveService.dataParking.length + " tickets" : "—"; sub: root.ready ? (root.effectiveService.dataParking[0] ? String(root.effectiveService.dataParking[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("parking") }
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Dispensaries"; value: root.ready ? root.effectiveService.dataDisp.length + " retail" : "—"; sub: root.ready ? (function(){ var near=Y.nearestDispensaries(root.effectiveService.dataDisp, root.mLat, root.mLon, 1); return near.length ? String(near[0].rec.dba||"").slice(0,14) + " · " + near[0].miles.toFixed(1) + "mi" : String(root.effectiveService.dataDisp[0].dba||"").slice(0,14) })() : "—"; onClicked: root.openDetail("disp") }
+            // Lottery as compact chip - shows most recent Powerball numbers
             Rectangle {
               Layout.fillWidth: true; Layout.preferredHeight: 36; radius: 10
               color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07)
               Row { anchors.centerIn: parent; spacing: 6
-                Text { text: "🎟 Lottery"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
-                Text { text: root.ready ? root.effectiveService.dataLottery.length + " winners · " + (root.effectiveService.dataLottery[0] ? String(root.effectiveService.dataLottery[0].subtype||"").slice(0,14) : "—") : "—"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                Text { text: "🎟 Powerball"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
+                Text { text: root.ready && root.effectiveService.dataLottery.length ? (function(){ var r=root.effectiveService.dataLottery[0]; var nums=String(r.raw.winning_numbers||r.raw.winning_numbers||"").trim(); return nums ? nums.slice(0,20) + " • " + Y.timeAgo(new Date(r.ts).toISOString()) : r.subtype })() : "—"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 10; font.bold: true; elide: Text.ElideRight; width: 140; horizontalAlignment: Text.AlignHCenter }
               }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onEntered: parent.border.color = Util.alpha(Color.accent, 0.55); onExited: parent.border.color = Util.alpha(Color.foreground, 0.07); onClicked: root.openDetail("lottery") }
             }

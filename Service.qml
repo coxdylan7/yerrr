@@ -66,19 +66,40 @@ Item {
   property string locationError: ""
   property string borough: "All"
   property string zip: ""
+  property bool locationOverridden: false
+  property double overrideLat: NaN
+  property double overrideLon: NaN
+
+  function setLocation(latVal, lonVal, source) {
+    if (!isFinite(latVal) || !isFinite(lonVal)) return
+    // Clamp to NYC bbox or allow Hawthorne? Allow any but mark overridden
+    lat = Number(latVal); lon = Number(lonVal); accuracy = 5; locationSource = source || "manual"
+    locationOverridden = true
+    overrideLat = Number(latVal); overrideLon = Number(lonVal)
+    // Derive borough/zip if possible via Y.boroughFromZip not applicable for lat/lon, keep All
+    console.log("yerrr: location set to " + lat + "," + lon + " via " + locationSource)
+    // Refresh data that depends on location
+    fetchMapTiles()
+  }
+  function clearLocationOverride() {
+    locationOverridden = false; overrideLat = NaN; overrideLon = NaN
+    console.log("yerrr: location override cleared, back to " + lat + "," + lon)
+    fetchLocation()
+  }
 
   function effectiveLat() {
+    if (locationOverridden && isFinite(overrideLat)) return overrideLat
     var ov = Y.configFloat(pluginEntry, "locationOverrideLat", NaN)
     if (isFinite(ov)) return ov
     var s = Y.configStr(pluginEntry, "locationOverrideLat", "")
     var n = Number(s)
     if (s!=="" && isFinite(n)) return n
     if (!isFinite(lat) || !isFinite(lon)) return 40.7128
-    // Clamp Hawthorne/outside NYC to NYC bbox so map/data correlate
     if (lat < 40.49 || lat > 40.92 || lon < -74.26 || lon > -73.68) return 40.7128
     return lat
   }
   function effectiveLon() {
+    if (locationOverridden && isFinite(overrideLon)) return overrideLon
     var ov = Y.configFloat(pluginEntry, "locationOverrideLon", NaN)
     if (isFinite(ov)) return ov
     var s = Y.configStr(pluginEntry, "locationOverrideLon", "")
