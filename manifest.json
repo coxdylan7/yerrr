@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "djc.yerrr",
   "name": "Yerrr",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "author": "djc",
   "license": "MIT",
   "description": "Jarvis-like NYC dashboard: 311, MTA subway, Citi Bike, NYPD, Air Quality, DOB, Parking, Lottery, Cannabis dispensaries (NY OCM) — cross-referenced by zip/borough/time. Clean overview with OSM map of your area, local-update chips, and click-through dataset detail panels. Bar icon expands to full dash with wavy sprite, voice, and terminal. Location-aware via GeoClue/nmcli.",

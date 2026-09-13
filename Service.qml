@@ -205,7 +205,7 @@ Item {
   function fetchParking(){ procParking.collected=""; procParking.command=["/usr/bin/python3", helperParking, cacheParking, "100", appToken]; procParking.running=true }
   function fetchLottery(){ procLottery.collected=""; procLottery.command=["/usr/bin/python3", helperLottery, cacheLottery]; procLottery.running=true }
   function fetchDisp()  { procDisp.collected=""; procDisp.command=["/usr/bin/python3", helperDisp, cacheDisp, "300", appToken]; procDisp.running=true }
-  function fetchMapTiles() { var lat = isFinite(root.effectiveLat()) ? root.effectiveLat() : 40.7128; var lon = isFinite(root.effectiveLon()) ? root.effectiveLon() : -74.0060; procTiles.collected=""; procTiles.command=["/usr/bin/python3", helperTiles, cacheDir, String(lat), String(lon), "13"]; procTiles.running=true }
+  function fetchMapTiles(zoom) { var lat = isFinite(root.effectiveLat()) ? root.effectiveLat() : 40.7128; var lon = isFinite(root.effectiveLon()) ? root.effectiveLon() : -74.0060; var z = zoom && isFinite(zoom) ? String(Math.round(zoom)) : "13"; procTiles.collected=""; procTiles.command=["/usr/bin/python3", helperTiles, cacheDir, String(lat), String(lon), z]; procTiles.running=true }
 
   function handleCache(proc, setter, kind) {
     var txt = proc.collected; proc.collected=""
