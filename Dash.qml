@@ -66,60 +66,67 @@ Item {
       var sa = searchFiltered(a)
       for (var i = 0; i < sa.length && i < 40; i++) {
         var r = sa[i]
-        rows.push({ primary: String(r.subtype || r.raw.complaint_type || "311"), secondary: String(r.descriptor || r.status || ""), meta: String(r.neighborhood || r.raw.city || "") + (r.zip ? " " + r.zip : "") + (r.borough ? " · " + r.borough : ""), badge: String(r.borough || r.zip || ""), ago: Y.timeAgo(new Date(r.ts).toISOString()), lat: r.lat, lon: r.lon })
+        rows.push({ primary: String(r.subtype || r.raw.complaint_type || "311"), secondary: String(r.descriptor || r.status || ""), meta: String(r.neighborhood || r.raw.city || "") + (r.zip ? " " + r.zip : "") + (r.borough ? " · " + r.borough : ""), badge: String(r.borough || r.zip || ""), ago: Y.timeAgo(new Date(r.ts).toISOString()), lat: r.lat, lon: r.lon, rec: r })
       }
     } else if (key === "subway") {
       var subAll = effectiveService.dataSubway.slice()
       var subFiltered = searchFiltered(subAll)
       for (i = 0; i < subFiltered.length && i < 40; i++) {
         var s2 = subFiltered[i]
-        rows.push({ primary: String(s2.subtype || s2.id || ""), secondary: String(s2.status || ""), meta: String(s2.raw.cause || s2.raw.detail || ""), badge: String(s2.delayMin || 0) !== "0" ? s2.delayMin + "m del" : "ok", ago: Y.timeAgo(new Date(s2.ts).toISOString()), lat: s2.lat, lon: s2.lon })
+        rows.push({ primary: String(s2.subtype || s2.id || ""), secondary: String(s2.status || ""), meta: String(s2.raw.cause || s2.raw.detail || ""), badge: String(s2.delayMin || 0) !== "0" ? s2.delayMin + "m del" : "ok", ago: Y.timeAgo(new Date(s2.ts).toISOString()), lat: s2.lat, lon: s2.lon, rec: s2 })
       }
     } else if (key === "citi") {
       var cAll = timeFiltered(effectiveService.dataCiti)
       var cSearch = searchFiltered(cAll)
       for (i = 0; i < cSearch.length && i < 30; i++) {
         var ci = cSearch[i]
-        rows.push({ primary: String(ci.id || ci.raw.name || ci.raw.station_id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: String(ci.borough || ci.zip || ci.raw.address || "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : ""), badge: String(ci.docks || 0) + " docks", ago: "", lat: ci.lat, lon: ci.lon })
+        rows.push({ primary: String(ci.id || ci.raw.name || ci.raw.station_id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: String(ci.borough || ci.zip || ci.raw.address || "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : ""), badge: String(ci.docks || 0) + " docks", ago: "", lat: ci.lat, lon: ci.lon, rec: ci })
       }
     } else if (key === "nypd") {
       var n = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataNYPD)))
       for (i = 0; i < n.length && i < 40; i++) {
         var nr = n[i]
-        rows.push({ primary: String(nr.subtype || nr.raw.ofns_desc || "NYPD"), secondary: String(nr.raw.pd_desc || ""), meta: String(nr.borough || nr.zip || "") + (nr.raw.addr_pct_cd ? " pct " + nr.raw.addr_pct_cd : ""), badge: String(nr.raw.ky_cd || ""), ago: Y.timeAgo(new Date(nr.ts).toISOString()), lat: nr.lat, lon: nr.lon })
+        rows.push({ primary: String(nr.subtype || nr.raw.ofns_desc || "NYPD"), secondary: String(nr.raw.pd_desc || ""), meta: String(nr.borough || nr.zip || "") + (nr.raw.addr_pct_cd ? " pct " + nr.raw.addr_pct_cd : ""), badge: String(nr.raw.ky_cd || ""), ago: Y.timeAgo(new Date(nr.ts).toISOString()), lat: nr.lat, lon: nr.lon, rec: nr })
       }
     } else if (key === "air") {
       var ar = searchFiltered(timeFiltered(effectiveService.dataAir))
       for (i = 0; i < ar.length && i < 30; i++) {
         var air = ar[i]
-        rows.push({ primary: String(air.raw.site_id || air.id || "Air"), secondary: "AQI " + String(air.aqi || "—") + (air.raw.pollutant ? " · " + air.raw.pollutant : ""), meta: String(air.borough || air.zip || ""), badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()), lat: air.lat, lon: air.lon })
+        rows.push({ primary: String(air.raw.site_id || air.id || "Air"), secondary: "AQI " + String(air.aqi || "—") + (air.raw.pollutant ? " · " + air.raw.pollutant : ""), meta: String(air.borough || air.zip || ""), badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()), lat: air.lat, lon: air.lon, rec: air })
       }
     } else if (key === "dob") {
       var d = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataDOB)))
       for (i = 0; i < d.length && i < 30; i++) {
         var dr = d[i]
-        rows.push({ primary: String(dr.subtype || dr.raw.job_type || "Permit"), secondary: String(dr.raw.job__ || dr.id || ""), meta: String(dr.borough || dr.zip || ""), badge: String(dr.raw.job_status || ""), ago: Y.timeAgo(new Date(dr.ts).toISOString()), lat: dr.lat, lon: dr.lon })
+        rows.push({ primary: String(dr.subtype || dr.raw.job_type || "Permit"), secondary: String(dr.raw.job__ || dr.id || ""), meta: String(dr.borough || dr.zip || ""), badge: String(dr.raw.job_status || ""), ago: Y.timeAgo(new Date(dr.ts).toISOString()), lat: dr.lat, lon: dr.lon, rec: dr })
       }
     } else if (key === "parking") {
       var p = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataParking)))
       for (i = 0; i < p.length && i < 30; i++) {
         var pr = p[i]
-        rows.push({ primary: String(pr.subtype || pr.raw.violation_code || "Parking"), secondary: String(pr.raw.issuing_agency || ""), meta: String(pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount || pr.raw.amount_due || ""), ago: Y.timeAgo(new Date(pr.ts).toISOString()), lat: pr.lat, lon: pr.lon })
+        rows.push({ primary: String(pr.subtype || pr.raw.violation_code || "Parking"), secondary: String(pr.raw.issuing_agency || ""), meta: String(pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount || pr.raw.amount_due || ""), ago: Y.timeAgo(new Date(pr.ts).toISOString()), lat: pr.lat, lon: pr.lon, rec: pr })
       }
     } else if (key === "lottery") {
       var l = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataLottery)))
-      for (i = 0; i < l.length && i < 30; i++) {
+      for (i = 0; i < l.length && i < 40; i++) {
         var lr = l[i]
-        rows.push({ primary: String(lr.subtype || lr.raw.game || "Lottery"), secondary: "won " + String(lr.amount || lr.raw.winning_amount || ""), meta: String(lr.borough || lr.zip || ""), badge: String(lr.raw.winning_numbers || "").slice(0,12), ago: Y.timeAgo(new Date(lr.ts).toISOString()), lat: lr.lat, lon: lr.lon })
+        rows.push({ primary: String(lr.subtype || lr.raw.game || "Lottery"), secondary: "Draw " + (String(lr.raw.draw_date || "").slice(0,10)), meta: String(lr.raw.multiplier ? "mult " + lr.raw.multiplier + "×" : ""), badge: String(lr.raw.winning_numbers || "").split(/\s+/).slice(-1)[0] || "", ago: Y.timeAgo(new Date(lr.ts).toISOString()), lat: lr.lat, lon: lr.lon, rec: lr })
       }
     } else if (key === "disp") {
       var dr2 = searchFiltered(effectiveService.dataDisp.filter(pass))
       for (i = 0; i < dr2.length && i < 80; i++) {
         var dsp = dr2[i]
-        var mi = (isFinite(dsp.lat) && isFinite(dsp.lon)) ? Y.haversineMiles(root.mLat, root.mLon, dsp.lat, dsp.lon) : NaN
-        rows.push({ primary: String(dsp.dba || ""), secondary: String(dsp.city || "") + ", " + String(dsp.state || ""), meta: String(dsp.address || ""), badge: (isFinite(mi) ? mi.toFixed(1) + " mi" : String(dsp.status || "")), ago: "", lat: dsp.lat, lon: dsp.lon })
+        var mi2 = (isFinite(dsp.lat) && isFinite(dsp.lon)) ? Y.haversineMiles(root.mLat, root.mLon, dsp.lat, dsp.lon) : NaN
+        var openNow = Y.parseHoursForToday(dsp.hours || "").openNow
+        rows.push({ primary: String(dsp.dba || ""), secondary: String(dsp.city || "") + ", " + String(dsp.state || ""), meta: String(dsp.address || ""), badge: isFinite(mi2) ? mi2.toFixed(1) + " mi" : String(dsp.status || ""), ago: openNow === null ? "" : (openNow ? "Open" : "Closed"), lat: dsp.lat, lon: dsp.lon, rec: dsp })
       }
-      rows.sort(function(a, b){ return a.badge.indexOf("mi") !== -1 && b.badge.indexOf("mi") !== -1 ? parseFloat(a.badge) - parseFloat(b.badge) : 0 })
+      rows.sort(function(a, b){
+        var am = parseFloat(a.badge), bm = parseFloat(b.badge)
+        if (String(a.badge).indexOf("mi") !== -1 && String(b.badge).indexOf("mi") !== -1) return am - bm
+        if (a.ago === "Open" && b.ago !== "Open") return -1
+        if (a.ago !== "Open" && b.ago === "Open") return 1
+        return 0
+      })
       if (rows.length > 40) rows = rows.slice(0,40)
     }
     return rows
@@ -130,6 +137,85 @@ Item {
   }
   function openDetail(key) { root.dashKey = key; root.dashMode = "detail"; root.detailQuery = ""; console.log("yerrr Dash: openDetail key=" + key) }
   function backOverview() { root.dashMode = "overview"; root.dashKey = ""; console.log("yerrr Dash: backOverview") }
+
+  // ---- item detail (click a row -> full details) ----
+  property string selectedKey: ""
+  property var selectedItem: null
+  property var pendingPan: null
+  function openItemDetail(key, rec) { root.selectedKey = key; root.selectedItem = rec; console.log("yerrr Dash: item detail key=" + key) }
+  function closeItemDetail() { root.selectedItem = null; root.selectedKey = "" }
+
+  function ballsModel(nums) {
+    var s = String(nums || "")
+    if (!s.trim()) return []
+    return s.split(/\s+/).filter(function(p){ return p.trim().length > 0 })
+  }
+  function ballItems(nums, game) {
+    var arr = root.ballsModel(nums)
+    var g = String(game || "").toLowerCase()
+    var special = g.indexOf("powerball") !== -1 || g.indexOf("mega") !== -1 || g.indexOf("lucky") !== -1 || g.indexOf("cash4life") !== -1
+    var out = []
+    for (var i = 0; i < arr.length; i++) out.push({ n: arr[i], last: special && i === arr.length - 1 })
+    return out
+  }
+  function lotteryRows() {
+    var out = []
+    if (!ready) return out
+    var cur = ""
+    for (var i = 0; i < effectiveService.dataLottery.length; i++) {
+      var r = effectiveService.dataLottery[i]
+      var g = String(r.subtype || r.raw.game || "Lottery")
+      if (g !== cur) { out.push({ game: g, draw: r }); cur = g }
+    }
+    return out
+  }
+  function applyManualLocation() {
+    var la = Number(latInput.text.replace(",", "."))
+    var lo = Number(lonInput.text.replace(",", "."))
+    if (!isFinite(la) || !isFinite(lo)) { console.log("yerrr: manual location invalid"); return }
+    if (effectiveService && effectiveService.setLocation) effectiveService.setLocation(la, lo, "manual")
+  }
+  function recFields(rec) {
+    var src = rec && rec.raw ? rec.raw : rec
+    var out = []
+    if (!src || typeof src !== "object") return out
+    var keys = Object.keys(src)
+    for (var i = 0; i < keys.length && i < 60; i++) {
+      var k = keys[i]
+      if (k === "georeference" || k === "raw") continue
+      var v = src[k]
+      if (v === null || v === undefined) continue
+      var vs = typeof v === "object" ? JSON.stringify(v) : String(v)
+      if (!vs || vs.trim().length === 0) continue
+      if (vs.length > 120) vs = vs.slice(0, 120) + "…"
+      out.push({ k: k, v: vs })
+    }
+    return out
+  }
+  function itemPrimary(rec) {
+    if (!rec) return ""
+    if (rec.dba) return String(rec.dba)
+    if (rec.subtype) return String(rec.subtype)
+    if (rec.name) return String(rec.name)
+    return String(rec.id || "")
+  }
+  function itemSubtitle(rec) {
+    if (!rec) return ""
+    if (rec.address || rec.city) {
+      var parts = []
+      if (rec.address) parts.push(String(rec.address))
+      if (rec.city) parts.push(String(rec.city) + (rec.state ? ", " + rec.state : "") + (rec.zip ? " " + rec.zip : ""))
+      if (parts.length) return parts.join(", ")
+    }
+    if (rec.raw) {
+      var raw = rec.raw
+      if (raw.incident_address) return String(raw.incident_address)
+      if (raw.pd_desc) return String(raw.pd_desc)
+      if (raw.job__ || raw.job_number) return String(raw.job__ || raw.job_number)
+      if (raw.violation_code) return String(raw.violation_code)
+    }
+    return String(rec.secondary || rec.status || rec.city || rec.meta || "")
+  }
 
   Connections {
     target: root.ready ? root.effectiveService : null
@@ -272,7 +358,7 @@ Item {
           }
         }
 
-        // Cross summary + time filter + location
+        // Cross summary + time filter + location editor
         RowLayout {
           Layout.fillWidth: true
           spacing: 8
@@ -297,9 +383,53 @@ Item {
               }
             }
           }
+          // Manual location entry + clear
+          Row {
+            spacing: 4
+            Rectangle {
+              width: 58; height: 22; radius: 11
+              color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
+              TextInput {
+                id: latInput
+                anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+                verticalAlignment: TextInput.AlignVCenter
+                text: root.ready ? root.mLat.toFixed(4) : ""
+                color: Color.foreground; font.family: "monospace"; font.pixelSize: 10
+                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                onAccepted: root.applyManualLocation()
+              }
+            }
+            Rectangle {
+              width: 58; height: 22; radius: 11
+              color: Util.alpha(Color.foreground, 0.05); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
+              TextInput {
+                id: lonInput
+                anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+                verticalAlignment: TextInput.AlignVCenter
+                text: root.ready ? root.mLon.toFixed(4) : ""
+                color: Color.foreground; font.family: "monospace"; font.pixelSize: 10
+                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                onAccepted: root.applyManualLocation()
+              }
+            }
+            Rectangle {
+              width: 40; height: 22; radius: 11
+              color: Util.alpha(Color.accent, 0.14); border.width: 1; border.color: Util.alpha(Color.accent, 0.26)
+              Text { anchors.centerIn: parent; text: "Set"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.applyManualLocation() }
+            }
+            Rectangle {
+              visible: ready && effectiveService.locationOverridden
+              width: 44; height: 22; radius: 11
+              color: Util.alpha(Color.urgent, 0.1); border.width: 1; border.color: Util.alpha(Color.urgent, 0.2)
+              Text { anchors.centerIn: parent; text: "Clear"; color: Color.urgent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (effectiveService && effectiveService.clearLocationOverride) effectiveService.clearLocationOverride() } }
+            }
+          }
           Text {
-            text: ready ? (effectiveService.locationSource !== "none" ? ("📍 " + (filters.zip || effectiveService.borough || "loc") + (isFinite(effectiveService.accuracy) ? " ±" + Math.round(effectiveService.accuracy) + "m" : "")) : "locating…") : ""
-            color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10
+            text: ready ? (effectiveService.locationOverridden ? ("📍 " + root.mLat.toFixed(4) + "," + root.mLon.toFixed(4) + "\u2022custom") : (effectiveService.locationSource !== "none" ? ("📍 " + (filters.zip || effectiveService.borough || "loc") + (isFinite(effectiveService.accuracy) ? " ±" + Math.round(effectiveService.accuracy) + "m" : "")) : "locating…")) : ""
+            color: (ready && effectiveService.locationOverridden) ? Color.accent : Util.alpha(Color.foreground, 0.5)
+            font.family: Style.font.family; font.pixelSize: 10
           }
         }
 
@@ -323,6 +453,14 @@ Item {
             anchors.fill: parent
             visible: root.dashMode === "detail"
             sourceComponent: detailComp
+          }
+          Loader {
+            id: itemDetailLoader
+            anchors.fill: parent
+            active: root.selectedItem !== null
+            visible: root.selectedItem !== null
+            z: 3
+            sourceComponent: itemDetailComp
           }
         }
 
@@ -456,6 +594,7 @@ Item {
             // Sync pan to service location when not interacting
             onVisibleChanged: if (visible) { panLat = root.mLat; panLon = root.mLon; panZoom = root.mapZoom }
             Connections { target: root; function onMLatChanged(){ if (!mapMouse.drag.active) map.panLat = root.mLat } function onMLonChanged(){ if (!mapMouse.drag.active) map.panLon = root.mLon } }
+            Connections { target: root; function onPendingPanChanged(){ if (root.pendingPan) { map.panLat = root.pendingPan.lat; map.panLon = root.pendingPan.lon; map.panZoom = root.pendingPan.zoom || 15; root.pendingPan = null } } }
 
             Repeater {
               model: 9
@@ -523,7 +662,7 @@ Item {
                   anchors.margins: -4
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 14; root.openDetail("311"); root.detailQuery = modelData.zip || modelData.borough }
+                  onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 14; root.openItemDetail("311", modelData) }
                   onEntered: parent.scale = 1.5
                   onExited: parent.scale = 1.0
                 }
@@ -544,7 +683,7 @@ Item {
                 z: 10
                 color: "#3b82f6"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🚲"; font.pixelSize: 8 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openDetail("citi") } }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("citi", modelData) } }
               }
             }
             Repeater {
@@ -562,7 +701,7 @@ Item {
                 z: 10
                 color: "#22c55e"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🌿"; font.pixelSize: 9 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openDetail("disp") } }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("disp", modelData) } }
               }
             }
 
@@ -628,13 +767,35 @@ Item {
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "DOB"; value: root.ready ? root.effectiveService.dataDOB.length + " permits" : "—"; sub: root.ready ? (root.effectiveService.dataDOB[0] ? String(root.effectiveService.dataDOB[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("dob") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Parking"; value: root.ready ? root.effectiveService.dataParking.length + " tickets" : "—"; sub: root.ready ? (root.effectiveService.dataParking[0] ? String(root.effectiveService.dataParking[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("parking") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Dispensaries"; value: root.ready ? root.effectiveService.dataDisp.length + " retail" : "—"; sub: root.ready ? (function(){ var near=Y.nearestDispensaries(root.effectiveService.dataDisp, root.mLat, root.mLon, 1); return near.length ? String(near[0].rec.dba||"").slice(0,14) + " · " + near[0].miles.toFixed(1) + "mi" : String(root.effectiveService.dataDisp[0].dba||"").slice(0,14) })() : "—"; onClicked: root.openDetail("disp") }
-            // Lottery as compact chip - shows most recent Powerball numbers
+            // Lottery - latest draw with number balls, click for full history
             Rectangle {
-              Layout.fillWidth: true; Layout.preferredHeight: 36; radius: 10
+              Layout.fillWidth: true; Layout.preferredHeight: 58; radius: 10
               color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07)
-              Row { anchors.centerIn: parent; spacing: 6
-                Text { text: "🎟 Powerball"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
-                Text { text: root.ready && root.effectiveService.dataLottery.length ? (function(){ var r=root.effectiveService.dataLottery[0]; var nums=String(r.raw.winning_numbers||r.raw.winning_numbers||"").trim(); return nums ? nums.slice(0,20) + " • " + Y.timeAgo(new Date(r.ts).toISOString()) : r.subtype })() : "—"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 10; font.bold: true; elide: Text.ElideRight; width: 140; horizontalAlignment: Text.AlignHCenter }
+              Column {
+                anchors.fill: parent; anchors.margins: 7
+                spacing: 4
+                Text {
+                  text: "🎟 " + (root.ready && root.effectiveService.dataLottery.length ? String(root.effectiveService.dataLottery[0].subtype || "Lottery") : "Lottery") + (root.ready && root.effectiveService.dataLottery.length ? " · " + String(root.effectiveService.dataLottery[0].raw.draw_date || "").slice(0,10) : "")
+                  color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true
+                  elide: Text.ElideRight; width: parent.width
+                }
+                Row {
+                  spacing: 4
+                  Repeater {
+                    model: root.ready && root.effectiveService.dataLottery.length ? root.ballItems(root.effectiveService.dataLottery[0].raw.winning_numbers, root.effectiveService.dataLottery[0].subtype) : []
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: 22; height: 22; radius: 11
+                      color: modelData.last ? Util.alpha(Color.urgent, 0.85) : Util.alpha(Color.accent, 0.85)
+                      border.width: 1; border.color: Color.background
+                      Text { anchors.centerIn: parent; text: modelData.n; color: Color.background; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+                    }
+                  }
+                  Text {
+                    visible: !root.ready || !root.effectiveService.dataLottery.length
+                    text: "—"; color: Util.alpha(Color.foreground, 0.4); font.pixelSize: 10
+                  }
+                }
               }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onEntered: parent.border.color = Util.alpha(Color.accent, 0.55); onExited: parent.border.color = Util.alpha(Color.foreground, 0.07); onClicked: root.openDetail("lottery") }
             }
@@ -699,6 +860,64 @@ Item {
 
       Rectangle { Layout.fillWidth: true; height: 1; color: Util.alpha(Color.foreground, 0.08) }
 
+      // Lottery: latest draw per game with balls — full draw history below
+      Flickable {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 58
+        visible: root.dashKey === "lottery"
+        contentWidth: lotRow.width
+        contentHeight: 58
+        clip: true
+        flickableDirection: Flickable.HorizontalFlick
+        boundsBehavior: Flickable.StopAtBounds
+        Row {
+          id: lotRow
+          spacing: 8
+          height: 58
+          Repeater {
+            model: root.lotteryRows()
+            delegate: Rectangle {
+              required property var modelData
+              property string gameName: String(modelData.game || "")
+              property string ballNums: String(modelData.draw.raw.winning_numbers || "")
+              height: 52; width: ballRowLeft.implicitWidth + 40
+              radius: 10
+              anchors.verticalCenter: parent.verticalCenter
+              color: Util.alpha(Color.accent, 0.07); border.width: 1; border.color: Util.alpha(Color.accent, 0.2)
+              Row {
+                id: ballRowLeft
+                anchors.centerIn: parent
+                spacing: 8
+                Column {
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 1
+                  Text { text: modelData.game; color: Color.accent; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                  Text { text: String(modelData.draw.raw.draw_date || "").slice(0,10); color: Util.alpha(Color.foreground, 0.55); font.family: Style.font.family; font.pixelSize: 9 }
+                }
+                Row {
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: 2
+                  Repeater {
+                    model: root.ballItems(ballNums, gameName)
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: 22; height: 22; radius: 11
+                      color: modelData.last ? Util.alpha(Color.urgent, 0.85) : Util.alpha(Color.accent, 0.85)
+                      border.width: 1; border.color: Color.background
+                      Text { anchors.centerIn: parent; text: modelData.n; color: Color.background; font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
+                    }
+                  }
+                }
+              }
+              MouseArea {
+                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                onClicked: root.openItemDetail("lottery", modelData.draw)
+              }
+            }
+          }
+        }
+      }
+
       ListView {
         Layout.fillWidth: true
         Layout.fillHeight: true
@@ -731,7 +950,10 @@ Item {
             onEntered: bg.border.color = Util.alpha(Color.accent, 0.35)
             onExited: bg.border.color = Util.alpha(Color.foreground, 0.07)
             onClicked: {
-              if (isFinite(modelData.lat) && isFinite(modelData.lon)) {
+              if (modelData.rec) {
+                root.openItemDetail(modelData.$key || root.dashKey, modelData.rec)
+                console.log("yerrr: detail click item " + modelData.primary)
+              } else if (isFinite(modelData.lat) && isFinite(modelData.lon)) {
                 // Pan map to this location and show in overview
                 map.panLat = modelData.lat
                 map.panLon = modelData.lon
@@ -753,10 +975,277 @@ Item {
         text: root.ready ? (root.detailQuery !== "" ? "No matches for “" + root.detailQuery + "” in " + root.detailTitle(root.dashKey) : root.detailTitle(root.dashKey) + " is still loading — refresh (⭮) or wait for the next update cycle") : "Connectivity loading…"
         color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 11
       }
-      Text {
-        Layout.fillWidth: true
-        text: root.detailQuery !== "" ? "\"" + root.detailQuery + "\" — clear with ✕ or Esc. Full filters: header pills + “❯” terminal e.g. \"queens subway\", \"11249 disp\"" : "Search filters in the box in real time — or use “❯” terminal e.g. \"queens subway\", \"11249 disp\""
-        color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 9
+    }
+  }
+
+  // ================= ITEM DETAIL (click a row -> full panel) =================
+  Component {
+    id: itemDetailComp
+    Item {
+      anchors.fill: parent
+      Rectangle {
+        anchors.fill: parent
+        color: Util.alpha(Color.background, 0.55)
+        MouseArea { anchors.fill: parent; onClicked: root.closeItemDetail() }
+      }
+      Rectangle {
+        id: itemCard
+        width: Math.min(parent.width * 0.86, 680)
+        height: Math.min(parent.height * 0.9, 760)
+        anchors.centerIn: parent
+        radius: 16
+        color: Util.alpha(Color.background, 0.98)
+        border.width: 1; border.color: Util.alpha(Color.foreground, 0.12)
+        layer.enabled: true
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 16
+          spacing: 8
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text {
+              Layout.fillWidth: true
+              text: root.itemPrimary(root.selectedItem)
+              color: Color.foreground; font.family: Style.font.family
+              font.pixelSize: 17; font.bold: true; elide: Text.ElideRight
+            }
+            Rectangle {
+              height: 22; width: tagTxt.implicitWidth + 12; radius: 11
+              color: Util.alpha(Color.accent, 0.14); border.width: 1; border.color: Util.alpha(Color.accent, 0.26)
+              Text { id: tagTxt; anchors.centerIn: parent; text: root.detailTitle(root.selectedKey); color: Color.accent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+            }
+            Rectangle {
+              height: 22; width: 62; radius: 11
+              color: Util.alpha(Color.foreground, 0.06); border.width: 1; border.color: Util.alpha(Color.foreground, 0.1)
+              Text { anchors.centerIn: parent; text: "Close ✕"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 10 }
+              MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.closeItemDetail() }
+            }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            text: root.itemSubtitle(root.selectedItem)
+            color: Util.alpha(Color.foreground, 0.65); font.family: Style.font.family; font.pixelSize: 12
+            wrapMode: Text.Wrap
+          }
+
+          Rectangle { Layout.fillWidth: true; height: 1; color: Util.alpha(Color.foreground, 0.08) }
+
+          Flickable {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentHeight: bodyCol.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            Column {
+              id: bodyCol
+              width: parent.width
+              spacing: 12
+
+              // Badges: open/closed + distance + eta + status
+              Flow {
+                width: parent.width
+                spacing: 6
+                Rectangle {
+                  visible: root.selectedItem && root.selectedKey === "disp" ? Y.parseHoursForToday(root.selectedItem.hours || "").openNow !== null : false
+                  height: 20; width: 56; radius: 10
+                  color: (root.selectedItem && Y.parseHoursForToday(root.selectedItem.hours || "").openNow) ? Util.alpha(Color.accent, 0.18) : Util.alpha(Color.urgent, 0.18)
+                  border.width: 1
+                  border.color: (root.selectedItem && Y.parseHoursForToday(root.selectedItem.hours || "").openNow) ? Util.alpha(Color.accent, 0.3) : Util.alpha(Color.urgent, 0.3)
+                  Text { anchors.centerIn: parent; text: (root.selectedItem && Y.parseHoursForToday(root.selectedItem.hours || "").openNow) ? "Open" : "Closed"; color: (root.selectedItem && Y.parseHoursForToday(root.selectedItem.hours || "").openNow) ? Color.accent : Color.urgent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+                }
+                Rectangle {
+                  visible: root.selectedItem && isFinite(Number(root.selectedItem.lat)) && isFinite(Number(root.selectedItem.lon))
+                  height: 20; width: distTxt.implicitWidth + 12; radius: 10
+                  color: Util.alpha(Color.accent, 0.14); border.width: 1; border.color: Util.alpha(Color.accent, 0.24)
+                  Text {
+                    id: distTxt
+                    anchors.centerIn: parent
+                    text: root.selectedItem ? Y.formatDistance(Y.haversineMiles(root.mLat, root.mLon, Number(root.selectedItem.lat), Number(root.selectedItem.lon))) + " mi" + (Y.estimateMinutes(Y.haversineMiles(root.mLat, root.mLon, Number(root.selectedItem.lat), Number(root.selectedItem.lon))) > 0 ? " · " + Y.estimateMinutes(Y.haversineMiles(root.mLat, root.mLon, Number(root.selectedItem.lat), Number(root.selectedItem.lon))) + " min" : "") : ""
+                    color: Color.accent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true
+                  }
+                }
+                Rectangle {
+                  visible: root.selectedItem && root.selectedItem.status
+                  height: 20; width: stTxt.implicitWidth + 12; radius: 10
+                  color: Util.alpha(Color.foreground, 0.07); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12)
+                  Text { id: stTxt; anchors.centerIn: parent; text: root.selectedItem ? String(root.selectedItem.status || "") : ""; color: Util.alpha(Color.foreground, 0.7); font.family: Style.font.family; font.pixelSize: 10 }
+                }
+                Text {
+                  visible: root.selectedItem && isFinite(Number(root.selectedItem.lat)) && isFinite(Number(root.selectedItem.lon))
+                  color: Util.alpha(Color.foreground, 0.4); font.family: "monospace"; font.pixelSize: 10
+                  text: root.selectedItem ? Number(root.selectedItem.lat).toFixed(5) + ", " + Number(root.selectedItem.lon).toFixed(5) : ""
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+              }
+
+              // Action buttons
+              Row {
+                width: parent.width
+                spacing: 6
+                Rectangle {
+                  visible: root.selectedItem && isFinite(Number(root.selectedItem.lat)) && isFinite(Number(root.selectedItem.lon))
+                  height: 26; width: 92; radius: 8
+                  color: Util.alpha(Color.accent, 0.14); border.width: 1; border.color: Util.alpha(Color.accent, 0.26)
+                  Text { anchors.centerIn: parent; text: "Navigate"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: if (effectiveService && effectiveService.openNavigation) effectiveService.openNavigation(root.selectedItem) }
+                }
+                Rectangle {
+                  visible: root.selectedItem && (root.selectedItem.website || (root.selectedItem.raw && root.selectedItem.raw.business_website))
+                  height: 26; width: 82; radius: 8
+                  color: Util.alpha(Color.accent, 0.14); border.width: 1; border.color: Util.alpha(Color.accent, 0.26)
+                  Text { anchors.centerIn: parent; text: "Visit Site"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: if (effectiveService && effectiveService.openSite) effectiveService.openSite(root.selectedItem) }
+                }
+                Rectangle {
+                  visible: root.selectedItem && isFinite(Number(root.selectedItem.lat)) && isFinite(Number(root.selectedItem.lon))
+                  height: 26; width: 92; radius: 8
+                  color: Util.alpha(Color.foreground, 0.07); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12)
+                  Text { anchors.centerIn: parent; text: "Show on map"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: {
+                    if (effectiveService) effectiveService.filters = { borough: (root.filters && root.filters.borough) || "All", zip: String((root.selectedItem && root.selectedItem.zip) || ""), hours: (root.filters && root.filters.hours) || 24, kinds: (root.filters && root.filters.kinds) || [] }
+                    root.pendingPan = { lat: Number(root.selectedItem.lat), lon: Number(root.selectedItem.lon), zoom: 15 }
+                    root.selectedItem = null; root.selectedKey = ""; root.dashMode = "overview"
+                  } }
+                }
+                Rectangle {
+                  visible: root.selectedItem
+                  height: 26; width: 72; radius: 8
+                  color: Util.alpha(Color.foreground, 0.07); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12)
+                  Text { anchors.centerIn: parent; text: "Copy"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                  MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: {
+                    var txt = root.itemPrimary(root.selectedItem) + " — " + root.itemSubtitle(root.selectedItem)
+                    var q = txt.replace(/\"/g, "\\\"").replace(/\\/g, "\\\\")
+                    Quickshell.execDetached(["/usr/bin/bash", "-c", "printf '%s' \"" + q + "\" | /usr/bin/wl-copy 2>/dev/null || true"])
+                  } }
+                }
+              }
+
+              // Dispensary hours - full weekly table like pot-head
+              Column {
+                visible: root.selectedKey === "disp" && root.selectedItem && String(root.selectedItem.hours || "").trim().length > 0
+                width: parent.width
+                spacing: 6
+                Text { text: "Hours"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                Text {
+                  width: parent.width
+                  text: "Today: " + (Y.parseHoursForToday(root.selectedItem.hours || "").today || "—")
+                  color: Y.parseHoursForToday(root.selectedItem.hours || "").openNow ? Color.accent : (Y.parseHoursForToday(root.selectedItem.hours || "").openNow === false ? Color.urgent : Util.alpha(Color.foreground, 0.6))
+                  font.family: Style.font.family; font.pixelSize: 11
+                  elide: Text.ElideRight
+                }
+                Rectangle {
+                  width: parent.width
+                  radius: 8
+                  color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.08)
+                  height: weeklyCol.implicitHeight + 12
+                  Column {
+                    id: weeklyCol
+                    anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                    anchors.margins: 6
+                    spacing: 2
+                    Repeater {
+                      model: root.selectedItem ? Y.parseWeeklyHours(root.selectedItem.hours || "") : []
+                      delegate: Rectangle {
+                        required property var modelData
+                        width: weeklyCol.width - 12; height: 22; radius: 6
+                        color: modelData.isToday ? Util.alpha(Color.accent, 0.12) : "transparent"
+                        border.color: modelData.isToday ? Util.alpha(Color.accent, 0.22) : "transparent"
+                        border.width: modelData.isToday ? 1 : 0
+                        Row {
+                          anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+                          spacing: 8
+                          Text { text: modelData.day; width: 40; color: modelData.isToday ? Color.accent : Util.alpha(Color.foreground, 0.85); font.family: Style.font.family; font.pixelSize: 11; font.bold: modelData.isToday; anchors.verticalCenter: parent.verticalCenter }
+                          Text { text: modelData.hours; width: parent.width - 48; color: modelData.isToday ? Color.foreground : Util.alpha(Color.foreground, 0.65); font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              // Lottery numbers - ball display
+              Column {
+                visible: root.selectedKey === "lottery" && root.selectedItem
+                width: parent.width
+                spacing: 6
+                Text {
+                  text: root.selectedItem ? (String(root.selectedItem.raw.game || "Draw") + " — " + String(root.selectedItem.raw.draw_date || "").slice(0, 10)) : ""
+                  color: Color.foreground; font.family: Style.font.family; font.pixelSize: 13; font.bold: true
+                }
+                Text {
+                  text: root.selectedItem && root.selectedItem.raw.multiplier ? ("Multiplier: " + root.selectedItem.raw.multiplier + "×") : ""
+                  color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 11
+                }
+                Row {
+                  width: parent.width
+                  spacing: 5
+                  Repeater {
+                    model: root.selectedItem ? root.ballItems(root.selectedItem.raw.winning_numbers, root.selectedItem.raw.game) : []
+                    delegate: Rectangle {
+                      required property var modelData
+                      width: 34; height: 34; radius: 17
+                      color: modelData.last ? Util.alpha(Color.urgent, 0.85) : Util.alpha(Color.accent, 0.85)
+                      border.width: 1; border.color: Color.background
+                      Text { anchors.centerIn: parent; text: modelData.n; color: Color.background; font.family: Style.font.family; font.pixelSize: 13; font.bold: true }
+                    }
+                  }
+                }
+                Column {
+                  visible: root.selectedItem && root.selectedItem.raw.double_play_winning_numbers
+                  width: parent.width
+                  spacing: 2
+                  Text { width: parent.width; text: "Double Play"; color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+                  Row {
+                    width: parent.width
+                    spacing: 5
+                    Repeater {
+                      model: root.selectedItem ? root.ballsModel(root.selectedItem.raw.double_play_winning_numbers) : []
+                      delegate: Rectangle {
+                        required property string modelData
+                        width: 28; height: 28; radius: 14
+                        color: Util.alpha(Color.accent, 0.6)
+                        border.width: 1; border.color: Color.background
+                        Text { anchors.centerIn: parent; text: modelData; color: Color.background; font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                      }
+                    }
+                  }
+                }
+              }
+
+              Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.foreground, 0.08) }
+
+              // All fields
+              Column {
+                width: parent.width
+                spacing: 4
+                Text { text: "Full record"; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 11; font.bold: true }
+                Repeater {
+                  model: root.selectedItem ? root.recFields(root.selectedItem) : []
+                  delegate: Row {
+                    required property var modelData
+                    width: parent.width
+                    spacing: 8
+                    Text {
+                      width: 130
+                      text: modelData.k
+                      color: Util.alpha(Color.foreground, 0.5); font.family: "monospace"; font.pixelSize: 10
+                      elide: Text.ElideRight
+                    }
+                    Text {
+                      width: parent.width - 138
+                      text: modelData.v
+                      color: Util.alpha(Color.foreground, 0.75); font.family: "monospace"; font.pixelSize: 10
+                      wrapMode: Text.Wrap
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

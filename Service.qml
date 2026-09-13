@@ -46,6 +46,8 @@ Item {
   readonly property string helperLottery: { var u=Qt.resolvedUrl("./helpers/fetch-lottery.py");        var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
   readonly property string helperDisp:  { var u=Qt.resolvedUrl("./helpers/fetch-dispensaries.py"); var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
   readonly property string helperTiles: { var u=Qt.resolvedUrl("./helpers/fetch-map-tiles.py");      var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
+  readonly property string helperWriteConfig: { var u=Qt.resolvedUrl("./helpers/write-config.py");  var s=String(u); if(s.indexOf("file://")===0) s=s.slice(7); return s }
+  readonly property string shellJson: homeDir + "/.config/omarchy/shell.json"
 
   FileView {
     id: shellConfigFile
@@ -72,19 +74,38 @@ Item {
 
   function setLocation(latVal, lonVal, source) {
     if (!isFinite(latVal) || !isFinite(lonVal)) return
-    // Clamp to NYC bbox or allow Hawthorne? Allow any but mark overridden
-    lat = Number(latVal); lon = Number(lonVal); accuracy = 5; locationSource = source || "manual"
+    var la = Number(latVal), lo = Number(lonVal)
+    if (la < -90 || la > 90 || lo < -180 || lo > 180) { console.log("yerrr: setLocation out of range"); return }
+    if (la < 40.0 || la > 41.0 || lo < -74.5 || lo > -73.5) { console.log("yerrr: setLocation far outside NYC, warning"); }
+    lat = la; lon = lo; accuracy = 5; locationSource = source || "manual"
     locationOverridden = true
-    overrideLat = Number(latVal); overrideLon = Number(lonVal)
-    // Derive borough/zip if possible via Y.boroughFromZip not applicable for lat/lon, keep All
-    console.log("yerrr: location set to " + lat + "," + lon + " via " + locationSource)
-    // Refresh data that depends on location
+    overrideLat = la; overrideLon = lo
+    console.log("yerrr: location set to " + la + "," + lo + " via " + locationSource)
+    writeConfigProc.collected = ""
+    writeConfigProc.command = ["/usr/bin/python3", helperWriteConfig, shellJson, "djc.yerrr", String(la), String(lo)]
+    writeConfigProc.running = true
     fetchMapTiles()
   }
   function clearLocationOverride() {
     locationOverridden = false; overrideLat = NaN; overrideLon = NaN
     console.log("yerrr: location override cleared, back to " + lat + "," + lon)
+    writeConfigProc.collected = ""
+    writeConfigProc.command = ["/usr/bin/python3", helperWriteConfig, shellJson, "djc.yerrr", "CLEAR", "CLEAR"]
+    writeConfigProc.running = true
     fetchLocation()
+  }
+  function openNavigation(rec) {
+    if (!rec || !isFinite(Number(rec.lat)) || !isFinite(Number(rec.lon))) { console.log("yerrr: no coords for navigation"); return }
+    var url = "https://www.google.com/maps/dir/?api=1&destination=" + Number(rec.lat) + "," + Number(rec.lon)
+    navProc.command = ["/usr/bin/xdg-open", url]
+    navProc.running = true
+  }
+  function openSite(rec) {
+    var web = rec && rec.website ? String(rec.website).trim() : (rec && rec.raw && rec.raw.business_website ? String(rec.raw.business_website).trim() : "")
+    if (!web) { console.log("yerrr: no website for " + (rec ? rec.dba || rec.name : "")); return }
+    if (web.indexOf("http") !== 0) web = "https://" + web
+    siteProc.command = ["/usr/bin/xdg-open", web]
+    siteProc.running = true
   }
 
   function effectiveLat() {
@@ -352,6 +373,20 @@ Item {
     onExited: function(code, status){ root.voiceBusy=false; if(code!==0) root.terminalOutput="Voxtype not available" }
   }
   Process { id: notifyProc }
+  Process {
+    id: writeConfigProc
+    property string collected: ""
+    stdout: SplitParser { onRead: function(data){ writeConfigProc.collected += data + "\n" } }
+    onExited: function(code, status){ if (code !== 0) console.log("yerrr: write-config failed"); else console.log("yerrr: write-config ok") }
+  }
+  Process {
+    id: navProc
+    onExited: function(code, status){ if (code !== 0) console.log("yerrr: xdg-open navigation failed " + code) }
+  }
+  Process {
+    id: siteProc
+    onExited: function(code, status){ if (code !== 0) console.log("yerrr: xdg-open site failed " + code) }
+  }
   FileView { id: voxtypeStateView; path: root.voxtypeStateFile; watchChanges: true; printErrors: false; onFileChanged: root.refreshVoxtypeState() }
   Process {
     id: voxtypeCheck

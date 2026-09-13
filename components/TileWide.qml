@@ -32,6 +32,10 @@ Rectangle {
       Text { text: root.subtitle; color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 9; elide: Text.ElideRight; width: parent.width }
     }
   }
+  Text {
+    anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter
+    text: "›"; color: Util.alpha(Color.accent, 0.55); font.family: Style.font.family; font.pixelSize: 18
+  }
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
