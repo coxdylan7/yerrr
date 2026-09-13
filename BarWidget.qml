@@ -84,42 +84,47 @@ BarWidget {
       else if (!hoverHandler.hovered) root.hoverOpen = false
     }
 
-    // Minimal dash content for hover — full Dash.qml is the click-expanded overlay
-    Column {
+    // Polished hover peek — compact Jarvis summary
+    ColumnLayout {
       width: parent.width - Style.space(16)
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.top: parent.top
       anchors.topMargin: Style.space(12)
       spacing: Style.space(10)
 
-      Row {
-        width: parent.width
+      RowLayout {
+        Layout.fillWidth: true
         spacing: 8
-        Comp.WavySprite { width: 72; height: 22; capturing: root.capturing; text: "YERRR"; fontSize: 13; baseColor: root.capturing ? Color.urgent : Color.accent }
-        Text { text: ready ? service.crossSummary : "Loading NYC…"; color: Util.alpha(Color.foreground,0.65); font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; width: parent.width - 80; anchors.verticalCenter: parent.verticalCenter }
+        Comp.WavySprite { Layout.preferredWidth: 72; Layout.preferredHeight: 22; capturing: root.capturing; text: "YERRR"; fontSize: 13; baseColor: root.capturing ? Color.urgent : Color.accent }
+        Column { Layout.fillWidth: true; spacing: 2
+          Text { width: parent.width; text: ready ? service.crossSummary : "Loading NYC…"; color: Util.alpha(Color.foreground,0.75); font.family: Style.font.family; font.pixelSize: 11; font.bold: true; elide: Text.ElideRight }
+          Text { width: parent.width; text: ready ? ("📍 " + (service.zip||service.borough||"NYC") + " • " + (isFinite(service.effectiveLat()) ? service.effectiveLat().toFixed(3) + "," + service.effectiveLon().toFixed(3) : "locating") + " • " + service.data311.length + " 311 • " + service.dataCiti.length + " Citi") : "Locating…"; color: Util.alpha(Color.foreground,0.55); font.family: Style.font.family; font.pixelSize: 10; elide: Text.ElideRight }
+        }
+        Rectangle { Layout.preferredWidth: 52; Layout.preferredHeight: 22; radius: 11; color: Util.alpha(Color.accent, 0.12); border.width: 1; border.color: Util.alpha(Color.accent, 0.22); Text { anchors.centerIn: parent; text: ready ? service.data311.length + " 311" : "—"; color: Color.accent; font.family: Style.font.family; font.pixelSize: 10; font.bold: true } }
       }
-      Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.foreground,0.08) }
-      Text { width: parent.width; wrapMode: Text.Wrap; text: ready ? ("📍 " + (service.zip||service.borough||"loc") + " • " + service.data311.length + " 311 • " + service.dataSubway.length + " subway • " + service.dataDisp.length + " dispos") : "Loading…"; color: Util.alpha(Color.foreground,0.6); font.family: Style.font.family; font.pixelSize: 11 }
+      Rectangle { Layout.fillWidth: true; height: 1; color: Util.alpha(Color.foreground,0.08) }
       GridLayout {
-        width: parent.width
+        Layout.fillWidth: true
         columns: 2
         columnSpacing: 8
         rowSpacing: 8
         Repeater {
           model: ready ? [
-            {k:"311", key:"311", v: service.data311.length + " • " + (service.data311[0] ? String(service.data311[0].subtype||"").slice(0,22) : "—")},
-            {k:"Subway", key:"subway", v: service.dataSubway.length + " lines • " + (service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,22) : "—")},
-            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations"},
-            {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " NY retail"},
-            {k:"Lottery", key:"lottery", v: service.dataLottery.length + " winners"}
+            {k:"311", key:"311", v: service.data311.length + " reports", sub: service.data311[0] ? String(service.data311[0].subtype||"").slice(0,20) : "—"},
+            {k:"Subway", key:"subway", v: service.dataSubway.length + " lines", sub: service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,20) : "—"},
+            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations", sub: service.dataCiti[0] ? (service.dataCiti[0].bikes + " bikes") : "—"},
+            {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " retail", sub: service.dataDisp[0] ? String(service.dataDisp[0].dba||"").slice(0,18) : "—"},
+            {k:"NYPD", key:"nypd", v: service.dataNYPD.length + " complaints", sub: service.dataNYPD[0] ? String(service.dataNYPD[0].subtype||"").slice(0,18) : "—"},
+            {k:"Lottery", key:"lottery", v: service.dataLottery.length + " winners", sub: service.dataLottery[0] ? String(service.dataLottery[0].subtype||"").slice(0,18) : "—"}
           ] : []
           delegate: Rectangle {
             required property var modelData
-            Layout.fillWidth: true; height: 48; radius: 8
+            Layout.fillWidth: true; Layout.preferredHeight: 56; radius: 10
             color: Util.alpha(Color.foreground,0.04); border.width:1; border.color: Util.alpha(Color.foreground,0.07)
-            Column { anchors.centerIn: parent; spacing: 2
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.k; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
-              Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.v; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; width: parent.width - 12; horizontalAlignment: Text.AlignHCenter }
+            Column { anchors.centerIn: parent; width: parent.width - 16; spacing: 3
+              Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: modelData.k; color: Util.alpha(Color.foreground,0.6); font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+              Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: modelData.v; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 11; font.bold: true; elide: Text.ElideRight }
+              Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: modelData.sub; color: Util.alpha(Color.foreground,0.5); font.family: Style.font.family; font.pixelSize: 9; elide: Text.ElideRight }
             }
             MouseArea {
               anchors.fill: parent
@@ -135,7 +140,12 @@ BarWidget {
           }
         }
       }
-      Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "Hover to peek — click a card (or YERRR) to open it in the full dash"; color: Util.alpha(Color.foreground,0.38); font.family: Style.font.family; font.pixelSize: 9 }
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: 8
+        Text { Layout.fillWidth: true; text: "Click YERRR or a card to open full dash • drag map, scroll zoom"; color: Util.alpha(Color.foreground,0.38); font.family: Style.font.family; font.pixelSize: 9; elide: Text.ElideRight }
+        Rectangle { Layout.preferredWidth: 28; Layout.preferredHeight: 20; radius: 8; color: Util.alpha(Color.accent,0.12); border.width: 1; border.color: Util.alpha(Color.accent,0.22); Text { anchors.centerIn: parent; text: "↗"; color: Color.accent; font.pixelSize: 10 } MouseArea { anchors.fill: parent; onClicked: if (root.service && root.service.toggleDash) root.service.toggleDash() } }
+      }
     }
   }
 }

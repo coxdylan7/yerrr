@@ -66,61 +66,58 @@ Item {
       var sa = searchFiltered(a)
       for (var i = 0; i < sa.length && i < 40; i++) {
         var r = sa[i]
-        rows.push({ primary: String(r.subtype || r.raw.complaint_type || "311"), secondary: String(r.descriptor || r.status || ""), meta: String(r.neighborhood || r.raw.city || "") + (r.zip ? " " + r.zip : "") + (r.borough ? " · " + r.borough : ""), badge: String(r.borough || r.zip || ""), ago: Y.timeAgo(new Date(r.ts).toISOString()) })
+        rows.push({ primary: String(r.subtype || r.raw.complaint_type || "311"), secondary: String(r.descriptor || r.status || ""), meta: String(r.neighborhood || r.raw.city || "") + (r.zip ? " " + r.zip : "") + (r.borough ? " · " + r.borough : ""), badge: String(r.borough || r.zip || ""), ago: Y.timeAgo(new Date(r.ts).toISOString()), lat: r.lat, lon: r.lon })
       }
     } else if (key === "subway") {
       var subAll = effectiveService.dataSubway.slice()
       var subFiltered = searchFiltered(subAll)
       for (i = 0; i < subFiltered.length && i < 40; i++) {
         var s2 = subFiltered[i]
-        rows.push({ primary: String(s2.subtype || s2.id || ""), secondary: String(s2.status || ""), meta: String(s2.raw.cause || s2.raw.detail || ""), badge: String(s2.delayMin || 0) !== "0" ? s2.delayMin + "m del" : "ok", ago: Y.timeAgo(new Date(s2.ts).toISOString()) })
+        rows.push({ primary: String(s2.subtype || s2.id || ""), secondary: String(s2.status || ""), meta: String(s2.raw.cause || s2.raw.detail || ""), badge: String(s2.delayMin || 0) !== "0" ? s2.delayMin + "m del" : "ok", ago: Y.timeAgo(new Date(s2.ts).toISOString()), lat: s2.lat, lon: s2.lon })
       }
     } else if (key === "citi") {
-      var c = searchFiltered(Y.filterByTime(effectiveService.dataCiti, h).filter(pass).length ? Y.filterByTime(effectiveService.dataCiti, h).filter(pass) : effectiveService.dataCiti.filter(pass))
-      // Actually use timeFiltered
       var cAll = timeFiltered(effectiveService.dataCiti)
       var cSearch = searchFiltered(cAll)
       for (i = 0; i < cSearch.length && i < 30; i++) {
         var ci = cSearch[i]
-        rows.push({ primary: String(ci.id || ci.raw.station_id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: String(ci.borough || ci.zip || "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : ""), badge: String(ci.docks || 0) + " docks", ago: "" })
+        rows.push({ primary: String(ci.id || ci.raw.name || ci.raw.station_id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: String(ci.borough || ci.zip || ci.raw.address || "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : ""), badge: String(ci.docks || 0) + " docks", ago: "", lat: ci.lat, lon: ci.lon })
       }
     } else if (key === "nypd") {
       var n = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataNYPD)))
       for (i = 0; i < n.length && i < 40; i++) {
         var nr = n[i]
-        rows.push({ primary: String(nr.subtype || nr.raw.ofns_desc || "NYPD"), secondary: String(nr.raw.pd_desc || ""), meta: String(nr.borough || nr.zip || "") + (nr.raw.addr_pct_cd ? " pct " + nr.raw.addr_pct_cd : ""), badge: String(nr.raw.ky_cd || ""), ago: Y.timeAgo(new Date(nr.ts).toISOString()) })
+        rows.push({ primary: String(nr.subtype || nr.raw.ofns_desc || "NYPD"), secondary: String(nr.raw.pd_desc || ""), meta: String(nr.borough || nr.zip || "") + (nr.raw.addr_pct_cd ? " pct " + nr.raw.addr_pct_cd : ""), badge: String(nr.raw.ky_cd || ""), ago: Y.timeAgo(new Date(nr.ts).toISOString()), lat: nr.lat, lon: nr.lon })
       }
     } else if (key === "air") {
       var ar = searchFiltered(timeFiltered(effectiveService.dataAir))
       for (i = 0; i < ar.length && i < 30; i++) {
         var air = ar[i]
-        rows.push({ primary: String(air.raw.site_id || air.id || "Air"), secondary: "AQI " + String(air.aqi || "—") + (air.raw.pollutant ? " · " + air.raw.pollutant : ""), meta: String(air.borough || air.zip || ""), badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()) })
+        rows.push({ primary: String(air.raw.site_id || air.id || "Air"), secondary: "AQI " + String(air.aqi || "—") + (air.raw.pollutant ? " · " + air.raw.pollutant : ""), meta: String(air.borough || air.zip || ""), badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()), lat: air.lat, lon: air.lon })
       }
     } else if (key === "dob") {
       var d = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataDOB)))
       for (i = 0; i < d.length && i < 30; i++) {
         var dr = d[i]
-        rows.push({ primary: String(dr.subtype || dr.raw.job_type || "Permit"), secondary: String(dr.raw.job__ || dr.id || ""), meta: String(dr.borough || dr.zip || ""), badge: String(dr.raw.job_status || ""), ago: Y.timeAgo(new Date(dr.ts).toISOString()) })
+        rows.push({ primary: String(dr.subtype || dr.raw.job_type || "Permit"), secondary: String(dr.raw.job__ || dr.id || ""), meta: String(dr.borough || dr.zip || ""), badge: String(dr.raw.job_status || ""), ago: Y.timeAgo(new Date(dr.ts).toISOString()), lat: dr.lat, lon: dr.lon })
       }
     } else if (key === "parking") {
       var p = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataParking)))
       for (i = 0; i < p.length && i < 30; i++) {
         var pr = p[i]
-        rows.push({ primary: String(pr.subtype || pr.raw.violation_code || "Parking"), secondary: String(pr.raw.issuing_agency || ""), meta: String(pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount || pr.raw.amount_due || ""), ago: Y.timeAgo(new Date(pr.ts).toISOString()) })
+        rows.push({ primary: String(pr.subtype || pr.raw.violation_code || "Parking"), secondary: String(pr.raw.issuing_agency || ""), meta: String(pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount || pr.raw.amount_due || ""), ago: Y.timeAgo(new Date(pr.ts).toISOString()), lat: pr.lat, lon: pr.lon })
       }
     } else if (key === "lottery") {
       var l = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataLottery)))
       for (i = 0; i < l.length && i < 30; i++) {
         var lr = l[i]
-        rows.push({ primary: String(lr.subtype || lr.raw.game || "Lottery"), secondary: "won " + String(lr.amount || lr.raw.winning_amount || ""), meta: String(lr.borough || lr.zip || ""), badge: String(lr.raw.winning_numbers || "").slice(0,12), ago: Y.timeAgo(new Date(lr.ts).toISOString()) })
+        rows.push({ primary: String(lr.subtype || lr.raw.game || "Lottery"), secondary: "won " + String(lr.amount || lr.raw.winning_amount || ""), meta: String(lr.borough || lr.zip || ""), badge: String(lr.raw.winning_numbers || "").slice(0,12), ago: Y.timeAgo(new Date(lr.ts).toISOString()), lat: lr.lat, lon: lr.lon })
       }
     } else if (key === "disp") {
       var dr2 = searchFiltered(effectiveService.dataDisp.filter(pass))
-      // Sort by distance before search? Do after search for relevance
       for (i = 0; i < dr2.length && i < 80; i++) {
         var dsp = dr2[i]
         var mi = (isFinite(dsp.lat) && isFinite(dsp.lon)) ? Y.haversineMiles(root.mLat, root.mLon, dsp.lat, dsp.lon) : NaN
-        rows.push({ primary: String(dsp.dba || ""), secondary: String(dsp.city || "") + ", " + String(dsp.state || ""), meta: String(dsp.address || ""), badge: (isFinite(mi) ? mi.toFixed(1) + " mi" : String(dsp.status || "")), ago: "" })
+        rows.push({ primary: String(dsp.dba || ""), secondary: String(dsp.city || "") + ", " + String(dsp.state || ""), meta: String(dsp.address || ""), badge: (isFinite(mi) ? mi.toFixed(1) + " mi" : String(dsp.status || "")), ago: "", lat: dsp.lat, lon: dsp.lon })
       }
       rows.sort(function(a, b){ return a.badge.indexOf("mi") !== -1 && b.badge.indexOf("mi") !== -1 ? parseFloat(a.badge) - parseFloat(b.badge) : 0 })
       if (rows.length > 40) rows = rows.slice(0,40)
@@ -435,7 +432,7 @@ Item {
         Layout.fillHeight: true
         spacing: 12
 
-        // Map
+        // Map - interactive with pins
         Rectangle {
           Layout.preferredWidth: 400
           Layout.fillHeight: true
@@ -444,14 +441,20 @@ Item {
           color: Util.alpha(Color.background, 0.97)
           border.width: 1; border.color: Util.alpha(Color.accent, 0.16)
 
-          // OSM tiles 3x3 centered on location
+          // OSM tiles 3x3 centered on location - interactive
           Item {
             id: map
             anchors.fill: parent
             clip: true
-            readonly property var t0: Y.tileXY(root.mLat, root.mLon, root.mapZoom)
+            property double panLat: root.mLat
+            property double panLon: root.mLon
+            property int panZoom: root.mapZoom
+            readonly property var t0: Y.tileXY(panLat, panLon, panZoom)
             readonly property double cx: width / 2
             readonly property double cy: height / 2
+            // Sync pan to service location when not interacting
+            onVisibleChanged: if (visible) { panLat = root.mLat; panLon = root.mLon; panZoom = root.mapZoom }
+            Connections { target: root; function onMLatChanged(){ if (!mapMouse.drag.active) map.panLat = root.mLat } function onMLonChanged(){ if (!mapMouse.drag.active) map.panLon = root.mLon } }
 
             Repeater {
               model: 9
@@ -461,12 +464,58 @@ Item {
                 y: map.cy - 128 - map.t0.fy * 256 + (Math.floor(index / 3) - 1) * 256
                 txx: map.t0.tx + (index % 3) - 1
                 tyy: map.t0.ty + Math.floor(index / 3) - 1
-                zz: root.mapZoom
-                src: root.ready ? ("file:///" + root.effectiveService.mapTileDir + "/" + root.mapZoom + "/" + (map.t0.tx + (index % 3) - 1) + "_" + (map.t0.ty + Math.floor(index / 3) - 1) + ".png") : ""
+                zz: map.panZoom
+                src: root.ready ? ("file:///" + root.effectiveService.mapTileDir + "/" + map.panZoom + "/" + (map.t0.tx + (index % 3) - 1) + "_" + (map.t0.ty + Math.floor(index / 3) - 1) + ".png") : ""
               }
             }
 
-            // Location marker
+            // Pins for events - 311 (red), Citi (blue), Disp (green), NYPD (yellow)
+            Repeater {
+              model: root.ready ? Y.filterByTime(root.effectiveService.data311, root.filters.hours).filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,25) : []
+              delegate: Rectangle {
+                required property var modelData
+                property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
+                x: map.cx + (pt.tx - map.t0.tx)*256 + (pt.fx - map.t0.fx)*256 - 4
+                y: map.cy + (pt.ty - map.t0.ty)*256 + (pt.fy - map.t0.fy)*256 - 4
+                width: 8; height: 8; radius: 4
+                color: Util.alpha(Color.urgent, 0.85); border.width: 1; border.color: Color.background
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  onClicked: { root.openDetail("311"); root.detailQuery = modelData.zip || modelData.borough }
+                  onEntered: parent.scale = 1.4
+                  onExited: parent.scale = 1.0
+                }
+              }
+            }
+            Repeater {
+              model: root.ready ? root.effectiveService.dataCiti.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,20) : []
+              delegate: Rectangle {
+                required property var modelData
+                property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
+                x: map.cx + (pt.tx - map.t0.tx)*256 + (pt.fx - map.t0.fx)*256 - 5
+                y: map.cy + (pt.ty - map.t0.ty)*256 + (pt.fy - map.t0.fy)*256 - 5
+                width: 10; height: 10; radius: 5
+                color: "#3b82f6"; border.width: 1; border.color: Color.background
+                Text { anchors.centerIn: parent; text: "🚲"; font.pixelSize: 7 }
+                MouseArea { anchors.fill: parent; onClicked: root.openDetail("citi") }
+              }
+            }
+            Repeater {
+              model: root.ready ? root.effectiveService.dataDisp.filter(function(r){ return isFinite(r.lat) && isFinite(r.lon) }).slice(0,15) : []
+              delegate: Rectangle {
+                required property var modelData
+                property var pt: Y.tileXY(modelData.lat, modelData.lon, map.panZoom)
+                x: map.cx + (pt.tx - map.t0.tx)*256 + (pt.fx - map.t0.fx)*256 - 6
+                y: map.cy + (pt.ty - map.t0.ty)*256 + (pt.fy - map.t0.fy)*256 - 6
+                width: 12; height: 12; radius: 6
+                color: "#22c55e"; border.width: 1; border.color: Color.background
+                Text { anchors.centerIn: parent; text: "🌿"; font.pixelSize: 8 }
+                MouseArea { anchors.fill: parent; onClicked: root.openDetail("disp") }
+              }
+            }
+
+            // Location marker (center)
             Rectangle {
               x: map.cx - 10; y: map.cy - 10; width: 20; height: 20; radius: 10
               color: Color.accent; border.width: 2; border.color: Color.background
@@ -478,14 +527,60 @@ Item {
                 style: Text.Outline; styleColor: Util.alpha(Color.background, 0.85)
               }
             }
+
+            // Drag to pan
+            MouseArea {
+              id: mapMouse
+              anchors.fill: parent
+              drag.target: null
+              property point lastPos
+              onPressed: function(mouse){ lastPos = Qt.point(mouse.x, mouse.y) }
+              onPositionChanged: function(mouse){
+                if (!pressed) return
+                var dx = mouse.x - lastPos.x
+                var dy = mouse.y - lastPos.y
+                // Approx degrees per pixel at zoom
+                var degPerPx = 360 / (Math.pow(2, map.panZoom) * 256)
+                // Latitude scales with cos
+                var latScale = Math.cos(map.panLat * Math.PI / 180)
+                if (latScale < 0.1) latScale = 0.1
+                map.panLon -= dx * degPerPx
+                map.panLat += dy * degPerPx / latScale
+                // Clamp to NYC area
+                if (map.panLat < 40.49) map.panLat = 40.49
+                if (map.panLat > 40.92) map.panLat = 40.92
+                if (map.panLon < -74.26) map.panLon = -74.26
+                if (map.panLon > -73.68) map.panLon = -73.68
+                lastPos = Qt.point(mouse.x, mouse.y)
+              }
+              onWheel: function(wheel){
+                var delta = wheel.angleDelta.y > 0 ? 1 : -1
+                var nz = Math.max(10, Math.min(16, map.panZoom + delta))
+                if (nz !== map.panZoom) map.panZoom = nz
+                wheel.accepted = true
+              }
+            }
           }
 
-          // Zoom label overlay
-          Text {
+          // Zoom controls + label
+          Column {
             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 8
-            text: "OSM z" + root.mapZoom + " · " + root.mLat.toFixed(4) + ", " + root.mLon.toFixed(4)
-            color: Util.alpha(Color.accent, 0.8); font.family: "monospace"; font.pixelSize: 9
-            style: Text.Outline; styleColor: Util.alpha(Color.background, 0.85)
+            spacing: 4
+            Row { spacing: 4
+              Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "+"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.min(16, map.panZoom+1) } }
+              Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "−"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.max(10, map.panZoom-1) } }
+              Rectangle { width: 28; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.08); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12); Text { anchors.centerIn: parent; text: "⌖"; color: Color.foreground; font.pixelSize: 12 } MouseArea { anchors.fill: parent; onClicked: { map.panLat = root.mLat; map.panLon = root.mLon; map.panZoom = root.mapZoom } } }
+            }
+            Text {
+              text: "OSM z" + map.panZoom + " · " + map.panLat.toFixed(4) + ", " + map.panLon.toFixed(4)
+              color: Util.alpha(Color.accent, 0.85); font.family: "monospace"; font.pixelSize: 9
+              style: Text.Outline; styleColor: Util.alpha(Color.background, 0.85)
+            }
+          }
+          Text {
+            anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8
+            text: "drag to pan • scroll to zoom • pins: 311 red, Citi blue, Disp green"
+            color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 8
           }
         }
 
@@ -582,11 +677,11 @@ Item {
         clip: true
         spacing: 6
         model: root.detailRows(root.dashKey)
-        delegate: Row {
+        delegate: Item {
           required property var modelData
           width: ListView.view.width - 4
           height: 48
-          Rectangle { anchors.fill: parent; radius: 10; color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07) }
+          Rectangle { id: bg; anchors.fill: parent; radius: 10; color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07) }
           Row {
             anchors.fill: parent; anchors.margins: 8; spacing: 10
             Rectangle {
@@ -600,6 +695,24 @@ Item {
               Text { text: (String(modelData.secondary || "") + (modelData.meta ? "  ·  " + modelData.meta : "")).slice(0, 140); color: Util.alpha(Color.foreground, 0.55); font.family: Style.font.family; font.pixelSize: 10; elide: Text.ElideRight; width: parent.width }
             }
             Text { text: modelData.ago || ""; color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 9; anchors.verticalCenter: parent.verticalCenter }
+          }
+          MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: bg.border.color = Util.alpha(Color.accent, 0.35)
+            onExited: bg.border.color = Util.alpha(Color.foreground, 0.07)
+            onClicked: {
+              if (isFinite(modelData.lat) && isFinite(modelData.lon)) {
+                // Pan map to this location and show in overview
+                map.panLat = modelData.lat
+                map.panLon = modelData.lon
+                map.panZoom = Math.max(map.panZoom, 14)
+                console.log("yerrr: detail click pan to " + modelData.lat + "," + modelData.lon)
+              } else {
+                console.log("yerrr: detail click " + modelData.primary)
+              }
+            }
           }
         }
       }

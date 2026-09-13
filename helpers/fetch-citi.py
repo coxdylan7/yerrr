@@ -280,25 +280,53 @@ def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
     validate_cache_path(cache)
-    url="https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
+    url_status="https://gbfs.citibikenyc.com/gbfs/en/station_status.json"
+    url_info="https://gbfs.citibikenyc.com/gbfs/en/station_information.json"
     try:
-        req=urllib.request.Request(url, headers={"User-Agent":"yerrr/0.1.0"})
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            raw=resp.read(MAX_BYTES+1)
-            if len(raw)>MAX_BYTES: fail("exceeds cap")
-            j=json.loads(raw.decode())
-            stations=j.get("data",{}).get("stations",[])
-            out=[]
-            for s in stations[:800]:
-                out.append({"station_id":s.get("station_id"),"num_bikes_available":s.get("num_bikes_available"),"num_docks_available":s.get("num_docks_available"),"is_installed":s.get("is_installed"),"is_renting":s.get("is_renting")})
-            data=json.dumps(out).encode()
-            atomic_write(cache, data)
-            print(json.dumps(out, separators=(',',':')))
-            return
+        # Fetch both status and information for names/addresses
+        req1=urllib.request.Request(url_status, headers={"User-Agent":"yerrr/0.1.0"})
+        with urllib.request.urlopen(req1, timeout=TIMEOUT) as resp:
+            raw1=resp.read(MAX_BYTES+1)
+            if len(raw1)>MAX_BYTES: fail("exceeds cap")
+            j1=json.loads(raw1.decode())
+            stations_status=j1.get("data",{}).get("stations",[])
+        req2=urllib.request.Request(url_info, headers={"User-Agent":"yerrr/0.1.0"})
+        with urllib.request.urlopen(req2, timeout=TIMEOUT) as resp:
+            raw2=resp.read(MAX_BYTES+1)
+            if len(raw2)>MAX_BYTES: fail("exceeds cap")
+            j2=json.loads(raw2.decode())
+            stations_info=j2.get("data",{}).get("stations",[])
+        # Build info map
+        info_map={}
+        for s in stations_info:
+            sid=str(s.get("station_id") or "")
+            if sid:
+                info_map[sid]={"name":s.get("name") or "", "address":s.get("address") or "", "lat":s.get("lat"), "lon":s.get("lon"), "region_id":s.get("region_id") or "", "capacity":s.get("capacity") or 0}
+        out=[]
+        for s in stations_status[:800]:
+            sid=str(s.get("station_id") or "")
+            info=info_map.get(sid, {})
+            out.append({
+                "station_id":sid,
+                "name": info.get("name") or sid,
+                "address": info.get("address") or "",
+                "region_id": info.get("region_id") or "",
+                "lat": info.get("lat"),
+                "lon": info.get("lon"),
+                "capacity": info.get("capacity") or 0,
+                "num_bikes_available":s.get("num_bikes_available"),
+                "num_docks_available":s.get("num_docks_available"),
+                "is_installed":s.get("is_installed"),
+                "is_renting":s.get("is_renting")
+            })
+        data=json.dumps(out).encode()
+        atomic_write(cache, data)
+        print(json.dumps(out, separators=(',',':')))
+        return
     except Exception as e:
         print(f"fetch-citi failed {e}, writing mock", file=sys.stderr)
     # Fallback for offline/demo: keep last-known cache, else mock
-    mock=[{"station_id":"1","num_bikes_available":12,"num_docks_available":8,"is_installed":1,"is_renting":1},{"station_id":"2","num_bikes_available":5,"num_docks_available":15,"is_installed":1,"is_renting":1}]
+    mock=[{"station_id":"1","name":"Mock Central Park","address":"59th & 5th","lat":40.7677,"lon":-73.9735,"num_bikes_available":12,"num_docks_available":8,"is_installed":1,"is_renting":1},{"station_id":"2","name":"Mock Union Sq","address":"14th & Broadway","lat":40.7359,"lon":-73.9905,"num_bikes_available":5,"num_docks_available":15,"is_installed":1,"is_renting":1}]
     fallback = load_cached(cache, mock)
     atomic_write(cache, json.dumps(fallback, separators=(',',':')).encode())
     print(json.dumps(fallback, separators=(',',':')))
