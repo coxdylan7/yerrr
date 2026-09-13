@@ -73,6 +73,9 @@ Item {
     var s = Y.configStr(pluginEntry, "locationOverrideLat", "")
     var n = Number(s)
     if (s!=="" && isFinite(n)) return n
+    if (!isFinite(lat) || !isFinite(lon)) return 40.7128
+    // Clamp Hawthorne/outside NYC to NYC bbox so map/data correlate
+    if (lat < 40.49 || lat > 40.92 || lon < -74.26 || lon > -73.68) return 40.7128
     return lat
   }
   function effectiveLon() {
@@ -81,6 +84,8 @@ Item {
     var s = Y.configStr(pluginEntry, "locationOverrideLon", "")
     var n = Number(s)
     if (s!=="" && isFinite(n)) return n
+    if (!isFinite(lat) || !isFinite(lon)) return -74.0060
+    if (lat < 40.49 || lat > 40.92 || lon < -74.26 || lon > -73.68) return -74.0060
     return lon
   }
 
@@ -129,12 +134,13 @@ Item {
   }
   function setFiltersFromTerminal(txt) {
     var p = Y.terminalParse(txt)
-    // keep current borough/zip if not mentioned
-    if (p.borough!=="All") root.filters.borough = p.borough
-    if (p.zip) root.filters.zip = p.zip
-    if (p.hours) root.filters = ({ borough: root.filters.borough, zip: root.filters.zip, hours: p.hours, kinds: p.kinds.length? p.kinds : root.filters.kinds })
-    else if (p.kinds.length) root.filters = ({ borough: root.filters.borough, zip: root.filters.zip, hours: root.filters.hours, kinds: p.kinds })
-    else root.filters = ({ borough: p.borough, zip: p.zip, hours: p.hours, kinds: root.filters.kinds })
+    var cur = root.filters
+    var nb = (p.borough !== "All" ? p.borough : cur.borough)
+    var nz = (p.zip ? p.zip : cur.zip)
+    var nh = (p.hours !== null && p.hours !== undefined ? p.hours : cur.hours)
+    var nk = (p.kinds.length ? p.kinds : cur.kinds)
+    // If input was "all", kinds already set to all
+    root.filters = { borough: nb, zip: nz, hours: nh, kinds: nk }
     root.terminalOutput = "filter → " + JSON.stringify(root.filters) + " — " + root.crossSummary
     console.log("yerrr: terminal parse " + txt + " -> " + JSON.stringify(root.filters))
   }
@@ -206,10 +212,21 @@ Item {
     try {
       var arr = JSON.parse(txt)
       if (!Array.isArray(arr)) arr = [arr]
-      // Truncate for UI
       if (arr.length > 2000) arr = arr.slice(0,2000)
-      setter(arr)
-      console.log("yerrr: loaded " + kind + " " + arr.length)
+      var norm = arr
+      try {
+        if (kind === "311") norm = arr.map(function(r){ return Y.normalize311(r) })
+        else if (kind === "subway") norm = arr.map(function(r){ return Y.normalizeSubway(r) })
+        else if (kind === "citi") norm = arr.map(function(r){ return Y.normalizeCiti(r) })
+        else if (kind === "nypd") norm = arr.map(function(r){ return Y.normalizeNYPD(r) })
+        else if (kind === "air") norm = arr.map(function(r){ return Y.normalizeAir(r) })
+        else if (kind === "dob") norm = arr.map(function(r){ return Y.normalizeDOB(r) })
+        else if (kind === "parking") norm = arr.map(function(r){ return Y.normalizeParking(r) })
+        else if (kind === "lottery") norm = arr.map(function(r){ return Y.normalizeLottery(r) })
+        else if (kind === "disp") norm = Y.normalizeDispensaries(arr)
+      } catch(ne){ console.log("yerrr: normalize " + kind + " err " + ne); norm = arr }
+      setter(norm)
+      console.log("yerrr: loaded " + kind + " " + norm.length + (norm.length !== arr.length ? " normalized" : ""))
       lastUpdate = new Date().toISOString()
     } catch(e) { console.log("yerrr: " + kind + " parse err " + e) }
   }

@@ -36,7 +36,7 @@ BarWidget {
       capturing: root.capturing
       text: "YERRR"
       fontSize: 13
-      baseColor: root.capturing ? Color.urgent : (root.hasLocation ? "#00e5ff" : Util.alpha(Color.foreground, 0.85))
+      baseColor: root.capturing ? Color.urgent : (root.hasLocation ? Color.accent : Util.alpha(Color.foreground, 0.85))
     }
   }
 
@@ -95,7 +95,7 @@ BarWidget {
       Row {
         width: parent.width
         spacing: 8
-        Comp.WavySprite { width: 72; height: 22; capturing: root.capturing; text: "YERRR"; fontSize: 13; baseColor: root.capturing ? Color.urgent : "#00e5ff" }
+        Comp.WavySprite { width: 72; height: 22; capturing: root.capturing; text: "YERRR"; fontSize: 13; baseColor: root.capturing ? Color.urgent : Color.accent }
         Text { text: ready ? service.crossSummary : "Loading NYC…"; color: Util.alpha(Color.foreground,0.65); font.family: Style.font.family; font.pixelSize: 11; elide: Text.ElideRight; width: parent.width - 80; anchors.verticalCenter: parent.verticalCenter }
       }
       Rectangle { width: parent.width; height: 1; color: Util.alpha(Color.foreground,0.08) }

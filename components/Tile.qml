@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 
 Rectangle {
   id: root
@@ -8,25 +9,25 @@ Rectangle {
   signal clicked()
   implicitHeight: 64
   radius: 10
-  color: Qt.rgba(1, 1, 1, 0.04)
+  color: Util.alpha(Color.foreground, 0.04)
   border.width: 1
-  border.color: Qt.rgba(1, 1, 1, 0.07)
+  border.color: Util.alpha(Color.foreground, 0.07)
   Column {
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.verticalCenter: parent.verticalCenter
     anchors.margins: 9
     spacing: 2
-    Text { text: root.title; color: Qt.rgba(1, 1, 1, 0.6); font.family: "Sans Serif"; font.pixelSize: 9; font.bold: true }
-    Text { text: root.value; color: "white"; font.family: "Sans Serif"; font.pixelSize: 12; font.bold: true; elide: Text.ElideRight; width: parent.width }
-    Text { text: root.sub; color: Qt.rgba(1, 1, 1, 0.5); font.family: "Sans Serif"; font.pixelSize: 9; elide: Text.ElideRight; width: parent.width }
+    Text { text: root.title; color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
+    Text { text: root.value; color: Color.foreground; font.family: Style.font.family; font.pixelSize: 12; font.bold: true; elide: Text.ElideRight; width: parent.width }
+    Text { text: root.sub; color: Util.alpha(Color.foreground, 0.5); font.family: Style.font.family; font.pixelSize: 9; elide: Text.ElideRight; width: parent.width }
   }
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.PointingHandCursor
     hoverEnabled: true
-    onEntered: root.border.color = Qt.rgba(0, 0.9, 1, 0.55)
-    onExited: root.border.color = Qt.rgba(1, 1, 1, 0.07)
+    onEntered: root.border.color = Util.alpha(Color.accent, 0.55)
+    onExited: root.border.color = Util.alpha(Color.foreground, 0.07)
     onClicked: { root.clicked() }
   }
 }

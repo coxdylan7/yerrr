@@ -43,10 +43,13 @@ function boroughFromZip(zip) {
   if (!z) return ""
   var n = parseInt(z,10)
   if (n>=10001 && n<=10282) return "Manhattan"
-  if (n>=11201 && n<=11256) return "Brooklyn"
-  if (n>=11351 && n<=11697) return "Queens"
-  if (n>=10451 && n<=10475) return "Bronx"
   if (n>=10301 && n<=10314) return "Staten Island"
+  if (n>=10451 && n<=10475) return "Bronx"
+  if ((n>=11004 && n<=11005) || (n>=11101 && n<=11109) || (n>=11351 && n<=11697) || (n>=11354 && n<=11375)) return "Queens"
+  if (n>=11201 && n<=11256) return "Brooklyn"
+  // Additional Queens/Brooklyn edge cases
+  if (n>=11354 && n<=11439) return "Queens"
+  if (n>=11690 && n<=11697) return "Queens"
   return ""
 }
 function boroughAbbr(b) {
@@ -91,32 +94,43 @@ function normalizeSubway(raw) {
   }
 }
 function normalizeCiti(raw) {
-  var lat = Number(raw.lat || raw.latitude)
-  var lon = Number(raw.lon || raw.longitude)
+  var lat = Number(raw.lat || raw.latitude || raw.latInternal || NaN)
+  var lon = Number(raw.lon || raw.longitude || raw.lonInternal || NaN)
+  // station_information join for lat/lon/region is done in helper, fallback to 0,0 if missing
+  var zip = String(raw.zip || raw.postalCode || "").trim()
   return {
-    id: String(raw.station_id || raw.legacy_id || ""),
-    zip: String(raw.zip || ""),
-    borough: boroughFromZip(raw.zip),
-    lat: lat, lon: lon,
+    id: String(raw.station_id || raw.legacy_id || raw.external_id || ""),
+    zip: zip,
+    borough: boroughFromZip(zip),
+    lat: isFinite(lat) ? lat : NaN, lon: isFinite(lon) ? lon : NaN,
     ts: Date.now(),
     kind: "citi",
-    subtype: "CitiBike",
-    bikes: Number(raw.num_bikes_available || 0),
-    docks: Number(raw.num_docks_available || 0),
+    subtype: String(raw.name || "CitiBike"),
+    bikes: Number(raw.num_bikes_available || raw.bikes || 0),
+    docks: Number(raw.num_docks_available || raw.docks || 0),
     raw: raw
   }
 }
 function normalizeNYPD(raw) {
-  var zip = String(raw.jurisdiction_code || raw.zip_code || "")
+  var zip = String(raw.zip_code || raw.jurisdiction_code || "").trim()
+  // Try geocoded column or lat/lon fields
+  var lat = raw.latitude ? Number(raw.latitude) : (raw.geocoded_column && raw.geocoded_column.coordinates ? Number(raw.geocoded_column.coordinates[1]) : (raw.lat ? Number(raw.lat) : NaN))
+  var lon = raw.longitude ? Number(raw.longitude) : (raw.geocoded_column && raw.geocoded_column.coordinates ? Number(raw.geocoded_column.coordinates[0]) : (raw.lon ? Number(raw.lon) : NaN))
+  var tsRaw = raw.cmplnt_fr_dt || raw.cmplnt_fr_date || raw.created_date
+  var ts = tsRaw ? Date.parse(tsRaw) : NaN
+  if (!isFinite(ts) && raw.cmplnt_fr_tm) {
+    // try combined date+time
+    var dt = String(raw.cmplnt_fr_dt || "") + "T" + String(raw.cmplnt_fr_tm || "")
+    ts = Date.parse(dt)
+  }
   return {
-    id: String(raw.complaint_report_number || raw.cmplnt_num || ""),
+    id: String(raw.cmplnt_num || raw.complaint_report_number || raw.incident_key || Math.random().toString(36).slice(2)),
     zip: zip,
-    borough: String(raw.boro_nm || boroughFromZip(zip)),
-    lat: raw.latitude ? Number(raw.latitude) : NaN,
-    lon: raw.longitude ? Number(raw.longitude) : NaN,
-    ts: raw.cmplnt_fr_dt ? Date.parse(raw.cmplnt_fr_dt) : Date.now(),
+    borough: String(raw.boro_nm || raw.borough || boroughFromZip(zip) || "").trim() || boroughFromZip(zip),
+    lat: lat, lon: lon,
+    ts: isFinite(ts) ? ts : Date.now(),
     kind: "nypd",
-    subtype: String(raw.law_cat_cd || raw.ofns_desc || "NYPD"),
+    subtype: String(raw.ofns_desc || raw.law_cat_cd || "NYPD"),
     raw: raw
   }
 }
@@ -200,8 +214,9 @@ function filterByTime(records, hours) {
 }
 function filterByBorough(records, borough) {
   if (!borough || borough==="All") return records.slice()
+  var target = String(borough).trim().toUpperCase()
   var out=[]
-  for (var i=0;i<records.length;i++) if (String(records[i].borough)===borough) out.push(records[i])
+  for (var i=0;i<records.length;i++) if (String(records[i].borough||"").trim().toUpperCase()===target) out.push(records[i])
   return out
 }
 function filterByZip(records, zip) {
@@ -234,28 +249,31 @@ function crossRef311VsSubway(by311, bySubway, hours) {
 }
 function terminalParse(input) {
   var s = String(input||"").toLowerCase().trim()
-  var out = { borough: "All", zip: "", hours: 24, kinds: [] }
+  var out = { borough: "All", zip: "", hours: null, kinds: [] }
   if (!s) return out
-  // borough detection
   for (var i=0;i<BOROUGHS.length;i++) if (s.indexOf(BOROUGHS[i].toLowerCase())!==-1) { out.borough = BOROUGHS[i]; break }
-  // zip 5 digits
   var m = s.match(/\b(\d{5})\b/)
   if (m) out.zip = m[1]
-  // hours: "24h" "7d" "today"
   var hm = s.match(/(\d+)\s*h/)
   if (hm) out.hours = Math.max(1, Math.min(168, parseInt(hm[1],10)))
-  if (s.indexOf("7d")!==-1 || s.indexOf("week")!==-1) out.hours = 168
-  if (s.indexOf("today")!==-1) out.hours = 24
-  // kinds
-  var kinds = ["311","subway","citi","nypd","air","dob","parking","lottery"]
-  for (var k=0;k<kinds.length;k++) if (s.indexOf(kinds[k])!==-1) out.kinds.push(kinds[k])
-  if (s.indexOf("all")!==-1) out.kinds = kinds.slice()
+  else if (s.indexOf("7d")!==-1 || s.indexOf("week")!==-1) out.hours = 168
+  else if (s.indexOf("today")!==-1) out.hours = 24
+  else if (s.indexOf("24h")!==-1) out.hours = 24
+  var kinds = ["311","subway","citi","nypd","air","dob","parking","lottery","disp","dispensary"]
+  for (var k=0;k<kinds.length;k++) if (s.indexOf(kinds[k])!==-1) {
+    var kk = kinds[k]==="dispensary"?"disp":kinds[k]
+    if (out.kinds.indexOf(kk)===-1) out.kinds.push(kk)
+  }
+  if (s.indexOf("all")!==-1) out.kinds = ["311","subway","citi","nypd","air","dob","parking","lottery","disp"]
   return out
 }
 function normalizeDispensaries(raw) {
   var out = []
   for (var i=0;i<raw.length;i++) {
     var r = raw[i]
+    var zip = String(r.zip || r.zip_code || "").trim()
+    var lat = isFinite(Number(r.lat)) ? Number(r.lat) : (r.georeference && r.georeference.coordinates ? Number(r.georeference.coordinates[1]) : NaN)
+    var lon = isFinite(Number(r.lon)) ? Number(r.lon) : (r.georeference && r.georeference.coordinates ? Number(r.georeference.coordinates[0]) : NaN)
     out.push({
       dba: String(r.dba || r.entity_name || r.dbA || "").trim(),
       license: String(r.license_number || "").trim(),
@@ -263,10 +281,12 @@ function normalizeDispensaries(raw) {
       status: String(r.status || r.license_status || "").trim(),
       city: String(r.city || "").trim(),
       state: String(r.state || r.State || "").trim(),
-      zip: String(r.zip || r.zip_code || "").trim(),
+      zip: zip,
+      borough: boroughFromZip(zip),
       address: String(r.address || r.address_line_1 || "").trim(),
-      lat: isFinite(Number(r.lat)) ? Number(r.lat) : NaN,
-      lon: isFinite(Number(r.lon)) ? Number(r.lon) : NaN
+      lat: lat, lon: lon,
+      ts: Date.now(),
+      kind: "disp"
     })
   }
   return out
