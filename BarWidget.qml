@@ -112,11 +112,14 @@ BarWidget {
         Repeater {
           model: ready ? [
             {k:"311", key:"311", v: service.data311.length + " reports", sub: service.data311[0] ? String(service.data311[0].subtype||"").slice(0,20) : "—"},
-            {k:"Subway", key:"subway", v: service.dataSubway.length + " lines", sub: service.dataSubway[0] ? String(service.dataSubway[0].status||"").slice(0,20) : "—"},
-            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations", sub: service.dataCiti[0] ? (service.dataCiti[0].bikes + " bikes • " + (service.dataCiti[0].name||"").slice(0,14)) : "—"},
+            {k:"Subway", key:"subway", v: service.dataSubway.length + " lines", sub: (function(){ var d=0; for (var i=0;i<service.dataSubway.length;i++) if(String(service.dataSubway[i].status||"").toLowerCase().indexOf("del")!==-1) d++; return d ? d+" delayed" : "Good service" })()},
+            {k:"Citi", key:"citi", v: service.dataCiti.length + " stations", sub: (function(){ var best=null,bd=1e18; for (var i=0;i<service.dataCiti.length;i++){ var s=service.dataCiti[i]; if(!isFinite(s.lat)||!isFinite(s.lon)) continue; var d=Y.haversineMiles(service.effectiveLat(),service.effectiveLon(),s.lat,s.lon); if(d<bd){bd=d;best=s} } return best ? best.bikes + " bikes • " + String(best.name||best.id||"station").slice(0,12) + " • " + bd.toFixed(1) + "mi" : "—" })()},
             {k:"Dispensaries", key:"disp", v: service.dataDisp.length + " retail", sub: service.dataDisp[0] ? String(service.dataDisp[0].dba||"").slice(0,18) + (service.dataDisp[0].zip ? " • " + service.dataDisp[0].zip : "") : "—"},
             {k:"NYPD", key:"nypd", v: service.dataNYPD.length + " complaints", sub: service.dataNYPD[0] ? String(service.dataNYPD[0].subtype||"").slice(0,18) : "—"},
-            {k:"Lottery", key:"lottery", v: service.dataLottery[0] ? String(service.dataLottery[0].raw.winning_numbers||"").slice(0,18) : service.dataLottery.length + " winners", sub: service.dataLottery[0] ? String(service.dataLottery[0].subtype||"") + " " + Y.timeAgo(new Date(service.dataLottery[0].ts).toISOString()) : "—"}
+            {k:"Air", key:"air", v: service.dataAir.length + " sites", sub: service.dataAir[0] ? "AQI " + String(service.dataAir[0].aqi||"") : "—"},
+            {k:"DOB", key:"dob", v: service.dataDOB.length + " permits", sub: service.dataDOB[0] ? String(service.dataDOB[0].subtype||"").slice(0,18) : "—"},
+            {k:"Parking", key:"parking", v: service.dataParking.length + " tickets", sub: service.dataParking[0] ? String(service.dataParking[0].subtype||"").slice(0,18) : "—"},
+            {k:"Lottery", key:"lottery", v: service.dataLottery.length + " draws", sub: (function(){ var g={}; for (var i=0;i<service.dataLottery.length;i++){ var name=String(service.dataLottery[i].subtype||service.dataLottery[i].raw.game||"Lottery"); g[name]=1 } return Object.keys(g).slice(0,2).join(" + ") })()}
           ] : []
           delegate: Rectangle {
             required property var modelData

@@ -273,11 +273,20 @@ def main():
                     except: pass
                 zfd = os.open(zdir, os.O_DIRECTORY | os.O_NOFOLLOW)
                 try:
-                    p = os.path.join(zdir, f"{nx}_{ny}.png")
+                    fname = f"{nx}_{ny}.png"
+                    p = os.path.join(zdir, fname)
+                    try:
+                        st = os.stat(fname, dir_fd=zfd)
+                        if stat.S_ISREG(st.st_mode) and st.st_size > 0:
+                            ok = True
+                            index.append({"x": nx, "y": ny, "z": zoom, "ok": ok, "cached": True})
+                            continue
+                    except FileNotFoundError:
+                        pass
                     ok = download(f"https://tile.openstreetmap.org/{zoom}/{nx}/{ny}.png", p, zfd)
                 finally:
                     os.close(zfd)
-                index.append({"x": nx, "y": ny, "z": zoom, "ok": ok})
+                index.append({"x": nx, "y": ny, "z": zoom, "ok": ok, "cached": False})
         print(json.dumps(index, separators=(',',':')))
     finally:
         os.close(dfd)

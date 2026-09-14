@@ -170,8 +170,9 @@ def ensure_parent_descriptor_relative(home_fd, home_path, parent_path):
 
 #!/usr/bin/python3
 """Secure MTA subway fetch — best-effort, byte capped, atomic nofollow."""
-import sys, os, json, pathlib, urllib.request, stat, secrets
+import sys, os, json, pathlib, urllib.request, stat, secrets, re, time
 MAX_BYTES = 256*1024
+MAX_FEED = 5*1024*1024
 TIMEOUT = 8
 def fail(msg):
     print(f"fetch-mta: {msg}", file=sys.stderr)
@@ -276,38 +277,124 @@ def load_cached(cache, mock):
     except Exception: pass
     return list(mock)
 
+LINES = ["1","2","3","4","5","6","7","A","B","C","D","E","F","G","J","L","M","N","Q","R","S","W","Z","SIR","GS"]
+
+def _read_varint(buf, off):
+    result = 0
+    shift = 0
+    while off < len(buf):
+        b = buf[off]; off += 1
+        result |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            break
+        shift += 7
+    return result, off
+
+def _walk(buf, off, end):
+    while off < end:
+        key, off = _read_varint(buf, off)
+        f = key >> 3
+        w = key & 7
+        if w == 0:
+            v, off = _read_varint(buf, off)
+            yield f, w, v
+        elif w == 2:
+            ln, off = _read_varint(buf, off)
+            yield f, w, (off, off + ln)
+            off += ln
+        elif w == 1:
+            yield f, w, off
+            off += 8
+        elif w == 5:
+            yield f, w, off
+            off += 4
+        else:
+            return
+
+def _translation_text(data, s, e):
+    for f, w, v in _walk(data, s, e):
+        if f == 1 and w == 2:
+            ts, te = v
+            for f2, w2, v2 in _walk(data, ts, te):
+                if f2 == 1 and w2 == 2:
+                    st, en = v2
+                    return data[st:en].decode("utf-8", "replace")
+    return ""
+
+def _status_from_header(h):
+    hl = h.lower()
+    if "no late night" in hl or " no " in hl or "no service" in hl or " ends early" in hl: return "No service"
+    if "delay" in hl: return "Significant delays"
+    if "skip" in hl: return "Skip-stop"
+    if "restored" in hl: return "Service restored"
+    if "maintenance" in hl: return "Planned work"
+    if "express" in hl: return "Express service"
+    if "overnight" in hl or "late night" in hl or "every 10 minutes" in hl: return "Reduced service"
+    return "Service change"
+
+def parse_alerts(data):
+    routes = {}
+    for f, w, v in _walk(data, 0, len(data)):
+        if f != 2 or w != 2:
+            continue
+        st, en = v
+        for f2, w2, v2 in _walk(data, st, en):
+            if f2 != 5 or w2 != 2:
+                continue
+            ast, aen = v2
+            al_routes = []
+            header = ""
+            for f3, w3, v3 in _walk(data, ast, aen):
+                if f3 == 5 and w3 == 2:
+                    ies, iee = v3
+                    for f4, w4, v4 in _walk(data, ies, iee):
+                        if f4 == 2 and w4 == 2:
+                            rs, re = v4
+                            r = data[rs:re].decode("utf-8", "replace")
+                            if r in LINES and r not in al_routes:
+                                al_routes.append(r)
+                elif f3 == 10 and w3 == 2 and not header:
+                    header = _translation_text(data, v3[0], v3[1])
+            if not header:
+                continue
+            for rline in al_routes:
+                if rline not in routes:
+                    routes[rline] = header
+    return routes
+
 def main():
     if len(sys.argv)!=2: fail(f"usage: {sys.argv[0]} <cache>")
     cache=sys.argv[1]
     validate_cache_path(cache)
-    # Try MTA status JSON (public, no key) — fallback to empty
-    urls=["https://collector-otp-prod.camsys-apps.com/realtime/gtfs","https://api.mta.info/status"]
-    out=[]
-    for url in urls:
-        try:
-            req=urllib.request.Request(url, headers={"User-Agent":"yerrr/0.1.0"})
-            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-                raw=resp.read(MAX_BYTES+1)
-                if len(raw)>MAX_BYTES: continue
-                # If GTFS protobuf, we won't parse — just store raw length as placeholder
-                # For now, try JSON
-                try:
-                    j=json.loads(raw.decode())
-                    # If MTA status JSON, extract
-                    if isinstance(j, dict):
-                        out.append({"line":"MTA","status":"Good service","raw":str(j)[:400]})
-                    else:
-                        out=j[:20] if isinstance(j, list) else []
-                    break
-                except:
-                    # protobuf or other — treat as good service placeholder
-                    out=[{"line":"1","status":"Good service"},{"line":"F","status":"Good service"}]
-                    break
-        except Exception as e:
-            continue
-    if not out:
-        out = load_cached(cache, [{"line":"1","status":"Good service"},{"line":"F","status":"Good service"},{"line":"L","status":"Good service"}])
-    data=json.dumps(out).encode()
-    atomic_write(cache, data)
-    print(json.dumps(out, separators=(',',':')))
+    url = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (yerrr)"})
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            raw = resp.read(MAX_FEED + 1)
+            if len(raw) > MAX_FEED:
+                raise RuntimeError("feed too large")
+        alerts = parse_alerts(raw)
+        now = int(time.time())
+        out = []
+        for line in LINES:
+            h = alerts.get(line, "")
+            h = re.sub(r"<[^>]+>", " ", h)
+            h = re.sub(r"\s+", " ", h).strip()
+            if h:
+                out.append({"line": line, "status": _status_from_header(h), "delayMin": 0, "cause": h[:220], "updated": now})
+            else:
+                out.append({"line": line, "status": "Good service", "delayMin": 0, "cause": "", "updated": now})
+        data = json.dumps(out).encode()
+        atomic_write(cache, data)
+        print(json.dumps(out, separators=(',',':')))
+        return
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f"fetch failed {e}, serving last-known cache", file=sys.stderr)
+        fallback = load_cached(cache, [])
+        if not fallback:
+            fallback = [{"line": l, "status": "Good service", "delayMin": 0, "cause": "", "updated": 0} for l in LINES]
+        atomic_write(cache, json.dumps(fallback, separators=(',',':')).encode())
+        print(json.dumps(fallback, separators=(',',':')))
 if __name__=="__main__": main()

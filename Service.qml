@@ -247,7 +247,11 @@ Item {
   function fetchParking(){ procParking.collected=""; procParking.command=["/usr/bin/python3", helperParking, cacheParking, "100", appToken]; procParking.running=true }
   function fetchLottery(){ procLottery.collected=""; procLottery.command=["/usr/bin/python3", helperLottery, cacheLottery]; procLottery.running=true }
   function fetchDisp()  { procDisp.collected=""; procDisp.command=["/usr/bin/python3", helperDisp, cacheDisp, "300", appToken]; procDisp.running=true }
-  function fetchMapTiles(zoom) { var lat = isFinite(root.effectiveLat()) ? root.effectiveLat() : 40.7128; var lon = isFinite(root.effectiveLon()) ? root.effectiveLon() : -74.0060; var z = zoom && isFinite(zoom) ? String(Math.round(zoom)) : "13"; procTiles.collected=""; procTiles.command=["/usr/bin/python3", helperTiles, cacheDir, String(lat), String(lon), z]; procTiles.running=true }
+  function fetchMapTiles(zoom, lat, lon) {
+    var la = (arguments.length >= 2 && isFinite(lat)) ? lat : (isFinite(root.effectiveLat()) ? root.effectiveLat() : 40.7128)
+    var lo = (arguments.length >= 3 && isFinite(lon)) ? lon : (isFinite(root.effectiveLon()) ? root.effectiveLon() : -74.0060)
+    var z = zoom && isFinite(zoom) ? String(Math.round(zoom)) : "13"
+    procTiles.collected=""; procTiles.command=["/usr/bin/python3", helperTiles, cacheDir, String(la), String(lo), z]; procTiles.running=true }
 
   function handleCache(proc, setter, kind) {
     var txt = proc.collected; proc.collected=""
@@ -400,7 +404,7 @@ Item {
   // Polling per dataset volatility
   Timer { id: timerLocation; interval: 300000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchLocation() }
   Timer { id: timer311;     interval: 300000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetch311() }      // 5m
-  Timer { id: timerSubway;  interval: 30000;  running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchSubway() }    // 30s
+  Timer { id: timerSubway;  interval: 120000;  running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchSubway() }    // 120s
   Timer { id: timerCiti;    interval: 120000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchCiti() }       // 2m
   Timer { id: timerNYPD;    interval: 900000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchNYPD() }       // 15m
   Timer { id: timerAir;     interval: 900000; running: true; repeat: true; triggeredOnStart: false; onTriggered: root.fetchAir() }        // 15m

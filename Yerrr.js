@@ -186,7 +186,7 @@ function normalizeParking(raw) {
     lat: NaN, lon: NaN,
     ts: raw.issue_date ? Date.parse(raw.issue_date) : Date.now(),
     kind: "parking",
-    subtype: String(raw.violation_code || "Parking"),
+    subtype: String(raw.violation || raw.violation_description || "Parking"),
     raw: raw
   }
 }

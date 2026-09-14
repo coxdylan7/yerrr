@@ -80,7 +80,7 @@ Item {
       var cSearch = searchFiltered(cAll)
       for (i = 0; i < cSearch.length && i < 30; i++) {
         var ci = cSearch[i]
-        rows.push({ primary: String(ci.id || ci.raw.name || ci.raw.station_id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: String(ci.borough || ci.zip || ci.raw.address || "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : ""), badge: String(ci.docks || 0) + " docks", ago: "", lat: ci.lat, lon: ci.lon, rec: ci })
+        rows.push({ primary: String(ci.raw.name || ci.id || "Station"), secondary: String(ci.bikes || 0) + " bikes · " + String(ci.docks || 0) + " docks", meta: (String(ci.raw.address || "") ? String(ci.raw.address) + " · " : "") + (String(ci.borough || ci.zip || "") ? String(ci.borough || ci.zip) + " · " : "") + (isFinite(ci.lat) && isFinite(ci.lon) ? ci.lat.toFixed(3) + "," + ci.lon.toFixed(3) : "") + (isFinite(ci.lat) && isFinite(ci.lon) ? " · " + Y.haversineMiles(root.mLat, root.mLon, ci.lat, ci.lon).toFixed(1) + " mi" : ""), badge: String(ci.docks || 0) + " docks", ago: "", lat: ci.lat, lon: ci.lon, rec: ci })
       }
     } else if (key === "nypd") {
       var n = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataNYPD)))
@@ -104,7 +104,7 @@ Item {
       var p = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataParking)))
       for (i = 0; i < p.length && i < 30; i++) {
         var pr = p[i]
-        rows.push({ primary: String(pr.subtype || pr.raw.violation_code || "Parking"), secondary: String(pr.raw.issuing_agency || ""), meta: String(pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount || pr.raw.amount_due || ""), ago: Y.timeAgo(new Date(pr.ts).toISOString()), lat: pr.lat, lon: pr.lon, rec: pr })
+        rows.push({ primary: String(pr.subtype || "Parking"), secondary: String(pr.raw.issuing_agency || "NYC Department of Finance") + (pr.raw.plate ? " · " + pr.raw.plate + (pr.raw.state ? "/" + pr.raw.state : "") : ""), meta: String(pr.raw.issuance_date || pr.borough || pr.zip || ""), badge: "$" + String(pr.raw.fine_amount != null ? pr.raw.fine_amount : (pr.raw.amount_due != null ? pr.raw.amount_due : "")), ago: Y.timeAgo(new Date(pr.ts).toISOString()), lat: pr.lat, lon: pr.lon, rec: pr })
       }
     } else if (key === "lottery") {
       var l = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataLottery)))
@@ -168,6 +168,23 @@ Item {
       if (g !== cur) { out.push({ game: g, draw: r }); cur = g }
     }
     return out
+  }
+  function nearestStation(n) {
+    if (!ready) return null
+    var best = null, bestD = 1e18
+    for (var i = 0; i < effectiveService.dataCiti.length; i++) {
+      var s = effectiveService.dataCiti[i]
+      if (!isFinite(s.lat) || !isFinite(s.lon)) continue
+      var d = Y.haversineMiles(root.mLat, root.mLon, s.lat, s.lon)
+      if (d < bestD) { bestD = d; best = s }
+    }
+    if (!best) return null
+    return { name: String(best.raw.name || best.id || "Station").slice(0, 24), bikes: Number(best.bikes || 0), docks: Number(best.docks || 0), mi: bestD }
+  }
+  function statsCiti() {
+    var b = 0
+    if (ready) for (var i = 0; i < effectiveService.dataCiti.length; i++) b += Number(effectiveService.dataCiti[i].bikes || 0)
+    return b
   }
   function applyManualLocation() {
     var la = Number(latInput.text.replace(",", "."))
@@ -551,18 +568,22 @@ Item {
             }
             Comp.Chip {
               text: "Citi"
-              value: root.ready ? String(root.effectiveService.dataCiti.length) + " stations · " + (Y.filterByTime(root.effectiveService.dataCiti, root.filters.hours)[0] ? Y.filterByTime(root.effectiveService.dataCiti, root.filters.hours)[0].bikes + " bikes" : "—") : "—"
+              value: root.ready ? String(root.effectiveService.dataCiti.length) + " stations · " + root.statsCiti() + " bikes" : "—"
               onClicked: root.openDetail("citi")
+            }
+            Comp.Chip {
+              text: "Parking"
+              value: root.ready ? String(root.effectiveService.dataParking.length) + " tickets" : "—"
+              onClicked: root.openDetail("parking")
             }
             Comp.Chip {
               text: "Pot Head"
               value: root.ready ? (function(){ var near = Y.nearestDispensaries(root.effectiveService.dataDisp, root.mLat, root.mLon, 1); return near.length ? (String(near[0].rec.dba || "").slice(0, 22) + " · " + near[0].miles.toFixed(1) + "mi") : ("0 fit filter · " + root.effectiveService.dataDisp.length + " NY") })() : "—"
               onClicked: root.openDetail("disp")
             }
-            Comp.Chip { text: "Lottery"; value: root.ready ? Y.filterByTime(root.effectiveService.dataLottery, root.filters.hours).length + " winners" : "—"; onClicked: root.openDetail("lottery") }
+            Comp.Chip { text: "Lottery"; value: root.ready ? (root.lotteryRows().map(function(g){ return String(g.game) }).join(" + ") || "—") : "—"; onClicked: root.openDetail("lottery") }
           }
         }
-        Text { text: "tap a card →"; color: Util.alpha(Color.foreground, 0.4); font.family: Style.font.family; font.pixelSize: 10; Layout.alignment: Qt.AlignVCenter }
       }
 
       RowLayout {
@@ -590,7 +611,8 @@ Item {
             readonly property var t0: Y.tileXY(panLat, panLon, panZoom)
             readonly property double cx: width / 2
             readonly property double cy: height / 2
-            onPanZoomChanged: if (root.ready && root.effectiveService && root.effectiveService.fetchMapTiles) root.effectiveService.fetchMapTiles(map.panZoom)
+            onPanZoomChanged: if (root.ready && root.effectiveService && root.effectiveService.fetchMapTiles) root.effectiveService.fetchMapTiles(map.panZoom, map.panLat, map.panLon)
+            Timer { id: panFetchTimer; interval: 300; repeat: false; onTriggered: if (root.ready && root.effectiveService && root.effectiveService.fetchMapTiles) root.effectiveService.fetchMapTiles(map.panZoom, map.panLat, map.panLon) }
             // Sync pan to service location when not interacting
             onVisibleChanged: if (visible) { panLat = root.mLat; panLon = root.mLon; panZoom = root.mapZoom }
             Connections { target: root; function onMLatChanged(){ if (!mapMouse.drag.active) map.panLat = root.mLat } function onMLonChanged(){ if (!mapMouse.drag.active) map.panLon = root.mLon } }
@@ -617,6 +639,7 @@ Item {
               drag.target: null
               property point lastPos
               onPressed: function(mouse){ lastPos = Qt.point(mouse.x, mouse.y) }
+              onReleased: function(mouse){ panFetchTimer.restart() }
               onPositionChanged: function(mouse){
                 if (!pressed) return
                 var dx = mouse.x - lastPos.x
@@ -662,7 +685,7 @@ Item {
                   anchors.margins: -4
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 14; root.openItemDetail("311", modelData) }
+                  onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 14; root.openItemDetail("311", modelData); panFetchTimer.restart() }
                   onEntered: parent.scale = 1.5
                   onExited: parent.scale = 1.0
                 }
@@ -683,7 +706,7 @@ Item {
                 z: 10
                 color: "#3b82f6"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🚲"; font.pixelSize: 8 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("citi", modelData) } }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("citi", modelData); panFetchTimer.restart() } }
               }
             }
             Repeater {
@@ -701,7 +724,7 @@ Item {
                 z: 10
                 color: "#22c55e"; border.width: 1.5; border.color: Color.background
                 Text { anchors.centerIn: parent; text: "🌿"; font.pixelSize: 9 }
-                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("disp", modelData) } }
+                MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor; onClicked: { map.panLat = modelData.lat; map.panLon = modelData.lon; map.panZoom = 15; root.openItemDetail("disp", modelData); panFetchTimer.restart() } }
               }
             }
 
@@ -721,14 +744,42 @@ Item {
           }
 
           // Zoom controls + label
+          // Map legend overlay
+          Column {
+            anchors.left: parent.left; anchors.top: parent.top; anchors.margins: 8
+            z: 12
+            Rectangle {
+              width: legendCol.width + 14; height: legendCol.height + 12; radius: 8
+              color: Util.alpha(Color.background, 0.82); border.width: 1; border.color: Util.alpha(Color.foreground, 0.14)
+              Column {
+                id: legendCol
+                anchors.centerIn: parent
+                spacing: 4
+                Repeater {
+                  model: [
+                    { c: Color.urgent,  t: "311 complaint" },
+                    { c: "#3b82f6",     t: "Citi station" },
+                    { c: "#22c55e",     t: "Dispensary" },
+                    { c: Color.accent,  t: "Your location" }
+                  ]
+                  delegate: Row {
+                    required property var modelData
+                    spacing: 6
+                    Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 5; color: modelData.c; border.width: 1; border.color: Util.alpha(Color.background, 0.8) }
+                    Text { text: modelData.t; color: Util.alpha(Color.foreground, 0.8); font.family: Style.font.family; font.pixelSize: 9 }
+                  }
+                }
+              }
+            }
+          }
           Column {
             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.margins: 8
             spacing: 4
             Row { spacing: 4
               Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "+"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.min(16, map.panZoom+1) } }
               Rectangle { width: 24; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.12); border.width: 1; border.color: Util.alpha(Color.foreground, 0.18); Text { anchors.centerIn: parent; text: "−"; color: Color.foreground; font.pixelSize: 14; font.bold: true } MouseArea { anchors.fill: parent; onClicked: map.panZoom = Math.max(10, map.panZoom-1) } }
-              Rectangle { width: 28; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.08); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12); Text { anchors.centerIn: parent; text: "⌖"; color: Color.foreground; font.pixelSize: 12 } MouseArea { anchors.fill: parent; onClicked: { map.panLat = root.mLat; map.panLon = root.mLon; map.panZoom = root.mapZoom } } }
-              Rectangle { width: 46; height: 24; radius: 6; color: Util.alpha(Color.accent, 0.18); border.width: 1; border.color: Util.alpha(Color.accent, 0.32); Text { anchors.centerIn: parent; text: "📍 Set"; color: Color.accent; font.pixelSize: 10; font.bold: true } MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (root.effectiveService && root.effectiveService.setLocation) root.effectiveService.setLocation(map.panLat, map.panLon, "map"); map.panLat = map.panLat; map.panLon = map.panLon } } }
+              Rectangle { width: 28; height: 24; radius: 6; color: Util.alpha(Color.foreground, 0.08); border.width: 1; border.color: Util.alpha(Color.foreground, 0.12); Text { anchors.centerIn: parent; text: "⌖"; color: Color.foreground; font.pixelSize: 12 } MouseArea { anchors.fill: parent; onClicked: { map.panLat = root.mLat; map.panLon = root.mLon; map.panZoom = root.mapZoom; panFetchTimer.restart() } } }
+              Rectangle { width: 46; height: 24; radius: 6; color: Util.alpha(Color.accent, 0.18); border.width: 1; border.color: Util.alpha(Color.accent, 0.32); Text { anchors.centerIn: parent; text: "📍 Set"; color: Color.accent; font.pixelSize: 10; font.bold: true } MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { if (root.effectiveService && root.effectiveService.setLocation) root.effectiveService.setLocation(map.panLat, map.panLon, "map"); map.panLat = map.panLat; map.panLon = map.panLon; panFetchTimer.restart() } } }
             }
             Text {
               text: "OSM z" + map.panZoom + " · " + map.panLat.toFixed(4) + ", " + map.panLon.toFixed(4) + (root.effectiveService && root.effectiveService.locationOverridden ? " • 📍 custom" : "")
@@ -738,7 +789,7 @@ Item {
           }
           Text {
             anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8
-            text: "drag to pan • scroll to zoom • pins: 311 red, Citi blue, Disp green • Set 📍 to move data"
+            text: "drag to pan • scroll to zoom • Set 📍 to move data"
             color: Util.alpha(Color.foreground, 0.45); font.family: Style.font.family; font.pixelSize: 8
           }
         }
@@ -761,40 +812,53 @@ Item {
             columnSpacing: 8
             rowSpacing: 8
 
-            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Citi"; value: root.ready ? root.effectiveService.dataCiti.length + " stations" : "—"; sub: root.ready ? (root.effectiveService.dataCiti[0] ? String(root.effectiveService.dataCiti[0].name||root.effectiveService.dataCiti[0].id||"").slice(0,16) + " · " + root.effectiveService.dataCiti[0].bikes + "🚲" : "—") : ""; onClicked: root.openDetail("citi") }
+            Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Citi"; value: root.ready ? root.effectiveService.dataCiti.length + " stations" : "—"; sub: root.ready ? (function(){ var n=root.nearestStation(); return n ? n.name.slice(0,16) + " · " + n.bikes + "🚲 · " + n.mi.toFixed(1) + "mi" : "—" })() : ""; onClicked: root.openDetail("citi") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "NYPD"; value: root.ready ? root.effectiveService.dataNYPD.length + " complaints" : "—"; sub: root.ready ? (Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0] ? Y.topComplaintTypes(root.effectiveService.dataNYPD, 1)[0].type.slice(0,16) : "—") : ""; onClicked: root.openDetail("nypd") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Air"; value: root.ready ? root.effectiveService.dataAir.length + " sites" : "—"; sub: root.ready ? (root.effectiveService.dataAir[0] ? "AQI " + String(root.effectiveService.dataAir[0].aqi || "") : "—") : ""; onClicked: root.openDetail("air") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "DOB"; value: root.ready ? root.effectiveService.dataDOB.length + " permits" : "—"; sub: root.ready ? (root.effectiveService.dataDOB[0] ? String(root.effectiveService.dataDOB[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("dob") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Parking"; value: root.ready ? root.effectiveService.dataParking.length + " tickets" : "—"; sub: root.ready ? (root.effectiveService.dataParking[0] ? String(root.effectiveService.dataParking[0].subtype || "").slice(0, 16) : "—") : ""; onClicked: root.openDetail("parking") }
             Comp.Tile { Layout.fillWidth: true; Layout.preferredHeight: 64; title: "Dispensaries"; value: root.ready ? root.effectiveService.dataDisp.length + " retail" : "—"; sub: root.ready ? (function(){ var near=Y.nearestDispensaries(root.effectiveService.dataDisp, root.mLat, root.mLon, 1); return near.length ? String(near[0].rec.dba||"").slice(0,14) + " · " + near[0].miles.toFixed(1) + "mi" : String(root.effectiveService.dataDisp[0].dba||"").slice(0,14) })() : "—"; onClicked: root.openDetail("disp") }
-            // Lottery - latest draw with number balls, click for full history
+            // Lottery - latest draw per game, click for full history
             Rectangle {
-              Layout.fillWidth: true; Layout.preferredHeight: 58; radius: 10
+              Layout.fillWidth: true; Layout.preferredHeight: 76; radius: 10
               color: Util.alpha(Color.foreground, 0.04); border.width: 1; border.color: Util.alpha(Color.foreground, 0.07)
               Column {
                 anchors.fill: parent; anchors.margins: 7
-                spacing: 4
+                spacing: 5
                 Text {
-                  text: "🎟 " + (root.ready && root.effectiveService.dataLottery.length ? String(root.effectiveService.dataLottery[0].subtype || "Lottery") : "Lottery") + (root.ready && root.effectiveService.dataLottery.length ? " · " + String(root.effectiveService.dataLottery[0].raw.draw_date || "").slice(0,10) : "")
+                  text: "🎟 WINS BY GAME"
                   color: Util.alpha(Color.foreground, 0.6); font.family: Style.font.family; font.pixelSize: 9; font.bold: true
-                  elide: Text.ElideRight; width: parent.width
+                  width: parent.width
                 }
-                Row {
-                  spacing: 4
-                  Repeater {
-                    model: root.ready && root.effectiveService.dataLottery.length ? root.ballItems(root.effectiveService.dataLottery[0].raw.winning_numbers, root.effectiveService.dataLottery[0].subtype) : []
-                    delegate: Rectangle {
-                      required property var modelData
-                      width: 22; height: 22; radius: 11
-                      color: modelData.last ? Util.alpha(Color.urgent, 0.85) : Util.alpha(Color.accent, 0.85)
-                      border.width: 1; border.color: Color.background
-                      Text { anchors.centerIn: parent; text: modelData.n; color: Color.background; font.family: Style.font.family; font.pixelSize: 10; font.bold: true }
+                Repeater {
+                  model: root.ready ? root.lotteryRows() : []
+                  delegate: Row {
+                    required property var modelData
+                    spacing: 6; width: parent.width
+                    Text {
+                      width: 105; elide: Text.ElideRight
+                      text: String(modelData.game).toUpperCase() + " · " + String(modelData.draw.raw.draw_date || "").slice(0,10)
+                      color: Util.alpha(Color.foreground, 0.85); font.family: Style.font.family; font.pixelSize: 9
+                      anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Row {
+                      spacing: 4
+                      Repeater {
+                        model: root.ballItems(modelData.draw.raw.winning_numbers, modelData.draw.subtype)
+                        delegate: Rectangle {
+                          required property var modelData
+                          width: 18; height: 18; radius: 9
+                          color: modelData.last ? Util.alpha(Color.urgent, 0.85) : Util.alpha(Color.accent, 0.85)
+                          border.width: 1; border.color: Color.background
+                          Text { anchors.centerIn: parent; text: modelData.n; color: Color.background; font.family: Style.font.family; font.pixelSize: 9; font.bold: true }
+                        }
+                      }
                     }
                   }
-                  Text {
-                    visible: !root.ready || !root.effectiveService.dataLottery.length
-                    text: "—"; color: Util.alpha(Color.foreground, 0.4); font.pixelSize: 10
-                  }
+                }
+                Text {
+                  visible: !root.ready || !root.effectiveService.dataLottery.length
+                  text: "—"; color: Util.alpha(Color.foreground, 0.4); font.pixelSize: 10
                 }
               }
               MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true; onEntered: parent.border.color = Util.alpha(Color.accent, 0.55); onExited: parent.border.color = Util.alpha(Color.foreground, 0.07); onClicked: root.openDetail("lottery") }
