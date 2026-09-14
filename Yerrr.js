@@ -134,28 +134,45 @@ function normalizeNYPD(raw) {
     raw: raw
   }
 }
+function parseDateUS(s) {
+  if (!s) return NaN
+  var m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (m) {
+    var d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]))
+    return isFinite(d.getTime()) ? d.getTime() : NaN
+  }
+  return Date.parse(String(s))
+}
 function normalizeAir(raw) {
+  var val = Number(raw.data_value)
+  var geoName = String(raw.geo_place_name || "").split(" (")[0]
+  var isBoro = String(raw.geo_type_name || "") === "Borough"
   return {
-    id: String(raw.site_id || raw.unique_id || ""),
+    id: String(raw.unique_id || raw.site_id || ""),
     zip: String(raw.zip_code || ""),
-    borough: String(raw.borough || ""),
+    borough: String(raw.borough || (isBoro ? geoName : "") || ""),
     lat: raw.latitude ? Number(raw.latitude) : NaN,
     lon: raw.longitude ? Number(raw.longitude) : NaN,
-    ts: raw.sample_date ? Date.parse(raw.sample_date) : Date.now(),
+    ts: raw.start_date ? Date.parse(raw.start_date) : NaN,
     kind: "air",
-    subtype: "Air",
-    aqi: Number(raw.aqi || raw.pm2_5 || 0),
+    subtype: String(raw.name || raw.indicator_id || "Air"),
+    aqi: isFinite(val) ? val : 0,
+    measure: String(raw.measure || ""),
+    measureInfo: String(raw.measure_info || ""),
+    timePeriod: String(raw.time_period || ""),
     raw: raw
   }
 }
 function normalizeDOB(raw) {
+  var ts = parseDateUS(raw.filing_date || raw.pre_filing_date)
+  if (!isFinite(ts)) ts = Date.now()
   return {
     id: String(raw.job__ || raw.job_number || ""),
     zip: String(raw.zip_code || ""),
     borough: String(raw.borough || ""),
     lat: raw.latitude ? Number(raw.latitude) : NaN,
     lon: raw.longitude ? Number(raw.longitude) : NaN,
-    ts: raw.pre_filing_date ? Date.parse(raw.pre_filing_date) : Date.now(),
+    ts: ts,
     kind: "dob",
     subtype: String(raw.job_type || "DOB"),
     raw: raw
@@ -424,6 +441,6 @@ if (typeof module !== "undefined") {
     groupByZip: groupByZip, groupByBorough: groupByBorough, filterByTime: filterByTime, filterByBorough: filterByBorough, filterByZip: filterByZip, sortByTimeDesc: sortByTimeDesc, topComplaintTypes: topComplaintTypes, crossRef311VsSubway: crossRef311VsSubway, terminalParse: terminalParse,
     nearestDispensaries: nearestDispensaries, tileXY: tileXY, timeAgo: timeAgo, BOROUGHS: BOROUGHS,
     formatDistance: formatDistance, estimateMinutes: estimateMinutes, buildAddress: buildAddress,
-    parseHoursForToday: parseHoursForToday, parseWeeklyHours: parseWeeklyHours
+    parseHoursForToday: parseHoursForToday, parseWeeklyHours: parseWeeklyHours, parseDateUS: parseDateUS
   }
 }

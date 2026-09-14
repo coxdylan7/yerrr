@@ -320,7 +320,7 @@ def main():
     if not (1 <= lim <= 5000): fail("limit out of range")
     if token and len(token) > APP_TOKEN_MAX: fail("token too long")
     if token and any(c in token for c in ["\n","\r","\x00","'",'"',"`"]): fail("token bad chars")
-    url = "https://data.cityofnewyork.us/resource/ipu4-2q9a.json?$limit=" + str(lim) + "&$order=pre_filing_date%20DESC"
+    url = "https://data.cityofnewyork.us/resource/ipu4-2q9a.json?$limit=" + str(lim)
     # Add app token as query if needed? Socrata uses header, not query
     try:
         raw = fetch_url(url, token)

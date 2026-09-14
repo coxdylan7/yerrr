@@ -92,7 +92,7 @@ Item {
       var ar = searchFiltered(timeFiltered(effectiveService.dataAir))
       for (i = 0; i < ar.length && i < 30; i++) {
         var air = ar[i]
-        rows.push({ primary: String(air.raw.site_id || air.id || "Air"), secondary: "AQI " + String(air.aqi || "—") + (air.raw.pollutant ? " · " + air.raw.pollutant : ""), meta: String(air.borough || air.zip || ""), badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()), lat: air.lat, lon: air.lon, rec: air })
+        rows.push({ primary: String(air.subtype || "Air"), secondary: String(air.raw.measure || "AQI") + " " + String(air.aqi || "—") + (air.timePeriod ? " · " + air.timePeriod : ""), meta: String(air.borough || air.zip || "") , badge: String(air.aqi || "—"), ago: Y.timeAgo(new Date(air.ts).toISOString()), lat: air.lat, lon: air.lon, rec: air })
       }
     } else if (key === "dob") {
       var d = Y.sortByTimeDesc(searchFiltered(timeFiltered(effectiveService.dataDOB)))
